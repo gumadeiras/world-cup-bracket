@@ -216,7 +216,7 @@ function knockoutTeams() {
       seen.add(team.n);
       return true;
     })
-    .sort(rankTeams);
+    .sort((a, b) => a.n.localeCompare(b.n));
 }
 
 function renderForm(team) {
