@@ -590,6 +590,92 @@
       text-align: left;
     }
 
+    .scorer-leaders {
+      margin-bottom: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 250, 240, 0.78);
+      padding: 8px;
+    }
+
+    .scorer-leaders summary {
+      cursor: pointer;
+      font-size: var(--type-md);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .scorer-cards {
+      display: grid;
+      grid-template-columns: repeat(12, 316px);
+      gap: 10px;
+      width: max-content;
+      padding-top: 10px;
+    }
+
+    .scorer-card {
+      display: grid;
+      align-content: start;
+      border: 1px solid var(--line);
+      background: rgba(255, 250, 240, 0.78);
+      padding: 8px;
+      font-size: var(--type-sm);
+    }
+
+    .scorer-card b {
+      display: inline-flex;
+      gap: 7px;
+      align-items: center;
+      min-height: 28px;
+      text-transform: uppercase;
+    }
+
+    .scorer-card--overall {
+      border-color: var(--red);
+    }
+
+    .scorer-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 58px 44px;
+      gap: 6px;
+      align-items: center;
+      border-top: 1px solid var(--line);
+      padding: 6px 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .scorer-card--overall .scorer-row {
+      grid-template-columns: minmax(0, 1fr) 74px 44px;
+    }
+
+    .scorer-row span:nth-child(n + 2) {
+      text-align: center;
+    }
+
+    .scorer-country {
+      display: inline-flex;
+      gap: 5px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .scorer-country .flag {
+      grid-row: auto;
+      width: 16px;
+      height: 16px;
+    }
+
+    .scorer-head {
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .scorer-empty {
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      padding: 8px 0 0;
+      text-transform: uppercase;
+    }
+
     .groups {
       display: grid;
       grid-template-columns: repeat(12, 316px);
@@ -1255,7 +1341,7 @@
         <div class="groups" data-standings></div>
       </div>
       <details class="overall smooth-details">
-        <summary>overall table</summary>
+        <summary>overall group stage table</summary>
         <div class="details-body">
           <div class="overall-row overall-head">
             <b>#</b><b>team</b><b>place</b><b>form</b><b>pts</b><b>gd</b><b>gf</b>
@@ -1264,6 +1350,15 @@
         </div>
       </details>
     </section>
+
+    <details class="scorer-leaders smooth-details">
+      <summary>scorer leaders</summary>
+      <div class="details-body">
+        <div class="groups-scroll">
+          <div class="scorer-cards" data-scorer-cards></div>
+        </div>
+      </div>
+    </details>
 
     <div class="randomize-wrap">
       <span class="randomize-label">decision fatigue?</span>

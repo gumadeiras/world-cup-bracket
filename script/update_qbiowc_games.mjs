@@ -5,6 +5,7 @@ import fs from "node:fs";
 const dataPath = "data.js";
 const prefix = "window.QBIOWC_DATA=";
 const scoreboardUrl = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260628&limit=200";
+const summaryUrl = (eventId) => `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=${eventId}`;
 
 function readData() {
   const text = fs.readFileSync(dataPath, "utf8").trim();
@@ -48,6 +49,48 @@ function addResult(team, gf, ga) {
   }
 }
 
+function stat(athlete, name) {
+  return (athlete.statistics || athlete.stats)?.find((item) => item.name === name)?.value || 0;
+}
+
+async function scorerStats(teamMeta, results) {
+  const players = new Map();
+  const summaries = await Promise.all(results.map(async (result) => {
+    const response = await fetch(summaryUrl(result.id));
+    if (!response.ok) throw new Error(`ESPN summary failed for ${result.id}: ${response.status}`);
+    return response.json();
+  }));
+
+  for (const summary of summaries) {
+    for (const roster of summary.rosters || []) {
+      const team = teamMeta.get(roster.team?.displayName);
+      if (!team) continue;
+      for (const entry of roster.roster || []) {
+        const name = entry.athlete?.displayName;
+        const goals = stat(entry, "totalGoals");
+        const games = stat(entry, "appearances");
+        if (!name || (!goals && !games)) continue;
+        const key = `${team.n}:${name}`;
+        const player = players.get(key) || { name, country: team.n, countryCode: team.a, goals: 0, games: 0 };
+        player.goals += goals;
+        player.games += games;
+        players.set(key, player);
+      }
+    }
+  }
+
+  const leaders = [...players.values()]
+    .filter((player) => player.goals)
+    .sort((a, b) => b.goals - a.goals || a.games - b.games || a.name.localeCompare(b.name));
+  return {
+    overall: leaders.slice(0, 5),
+    teams: Object.fromEntries([...teamMeta.keys()].map((team) => [
+      team,
+      leaders.filter((player) => player.country === team)
+    ]))
+  };
+}
+
 async function main() {
   const data = readData();
   const teamMeta = new Map();
@@ -75,7 +118,7 @@ async function main() {
     const homeName = home.team.displayName;
     const awayName = away.team.displayName;
     if (!teamMeta.has(homeName) || !teamMeta.has(awayName)) continue;
-    results.push({ date: event.date, home: homeName, away: awayName, homeScore: Number(home.score), awayScore: Number(away.score) });
+    results.push({ id: event.id, date: event.date, home: homeName, away: awayName, homeScore: Number(home.score), awayScore: Number(away.score) });
   }
 
   const groups = Object.fromEntries(data.standings.map((group) => [group.g, new Map(group.teams.map((team) => [team.n, blankTeam(team)]))]));
@@ -94,6 +137,7 @@ async function main() {
   }
 
   data.groupResults = results;
+  data.scorers = await scorerStats(teamMeta, results);
   data.updated = timestamp();
   writeData(data);
   console.log(`Updated ${results.length} completed World Cup matches.`);

@@ -124,6 +124,7 @@ const groupResults = data.groupResults || [];
 const allPlayers = [...new Set(Object.values(data.players || {}).flat())].sort();
 const standingsEl = document.querySelector("[data-standings]");
 const overallStandingsEl = document.querySelector("[data-overall-standings]");
+const scorerCardsEl = document.querySelector("[data-scorer-cards]");
 const standingsUpdatedEl = document.querySelector("[data-standings-updated]");
 const leaderboardEl = document.querySelector("[data-leaderboard]");
 const leaderboardUpdatedEl = document.querySelector("[data-leaderboard-updated]");
@@ -165,6 +166,52 @@ function renderStandings() {
       <div class="overall-row">
         <span>${index + 1}</span><span class="overall-team"><img class="flag" src="${team.l}" alt="">${escapeHtml(team.n)}</span><span>${team.placement}</span>${renderForm(team)}<span>${team.pts}</span><span>${team.gd}</span><span>${team.gf}</span>
       </div>`).join("");
+  renderScorerCards();
+}
+
+function renderScorerCards() {
+  const scorers = data.scorers || { overall: [], teams: {} };
+  const teams = knockoutTeams();
+  scorerCardsEl.innerHTML = `
+    <article class="scorer-card scorer-card--overall">
+      <b>overall top 5</b>
+      <div class="scorer-row scorer-head"><span>name</span><span>country</span><span>goals</span></div>
+      ${(scorers.overall || []).map((player) => {
+        const team = teamByCountry(player.country, player.countryCode);
+        return `
+        <div class="scorer-row"><span>${escapeHtml(player.name)}</span><span class="scorer-country">${team ? `<img class="flag" src="${team.l}" alt="">` : ""}${escapeHtml(player.countryCode || player.country)}</span><span>${player.goals}</span></div>`;
+      }).join("") || `<div class="scorer-empty">waiting for ESPN scorer stats</div>`}
+    </article>
+    ${teams.map((team) => {
+      const rows = (scorers.teams?.[team.n] || []).slice(0, 4);
+      return `<article class="scorer-card">
+        <b><img class="flag" src="${team.l}" alt="">${escapeHtml(team.n)}</b>
+        <div class="scorer-row scorer-head"><span>name</span><span>goals</span><span>games</span></div>
+        ${rows.map((player) => `
+          <div class="scorer-row"><span>${escapeHtml(player.name)}</span><span>${player.goals}</span><span>${player.games}</span></div>
+        `).join("") || `<div class="scorer-empty">no goals yet</div>`}
+      </article>`;
+    }).join("")}`;
+}
+
+function allStandingTeams() {
+  return standings.flatMap((group) => group.teams);
+}
+
+function teamByCountry(country, code) {
+  return allStandingTeams().find((team) => team.a === code || team.n === country) || null;
+}
+
+function knockoutTeams() {
+  const seen = new Set();
+  return rounds[0].matches
+    .flatMap(([id]) => teams(id))
+    .map(currentTeam)
+    .filter((team) => {
+      if (!team || seen.has(team.n)) return false;
+      seen.add(team.n);
+      return true;
+    });
 }
 
 function renderForm(team) {
@@ -828,14 +875,10 @@ async function copyAgentPrompt() {
 
 function renderBoostCountries() {
   const boost = document.querySelector("[data-boost-country]");
-  const knockoutTeams = rounds[0].matches
-    .flatMap((match) => teams(match[0]))
-    .map(currentTeam)
-    .filter(Boolean)
-    .map((team) => team.n);
+  const knockoutNames = new Set(knockoutTeams().map((team) => team.n));
   boost.innerHTML = `<option value="">pick one</option>${standings
     .flatMap((group) => group.teams.map((team) => team.n))
-    .filter((team) => knockoutTeams.includes(team))
+    .filter((team) => knockoutNames.has(team))
     .sort()
     .map((country) => `<option value="${escapeAttribute(country)}">${escapeHtml(country)}</option>`)
     .join("")}`;
