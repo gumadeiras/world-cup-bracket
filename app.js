@@ -135,11 +135,15 @@ function thirdPlaceKey(team) {
   return [team.pts, Number(team.gd), team.gf, -team.ga, team.n].join(":");
 }
 
+function rankTeams(a, b) {
+  return b.pts - a.pts || Number(b.gd) - Number(a.gd) || b.gf - a.gf || a.ga - b.ga || a.n.localeCompare(b.n);
+}
+
 function bestThirdTeams() {
   return standings
     .map((group) => ({ ...group.teams[2], group: group.g }))
     .filter((team) => team.n)
-    .sort((a, b) => b.pts - a.pts || Number(b.gd) - Number(a.gd) || b.gf - a.gf || a.ga - b.ga || a.n.localeCompare(b.n))
+    .sort(rankTeams)
     .slice(0, 8);
 }
 
@@ -161,7 +165,7 @@ function renderStandings() {
     </article>`).join("");
   overallStandingsEl.innerHTML = standings
     .flatMap((group) => group.teams.map((team, index) => ({ ...team, placement: `${index + 1}${group.g}` })))
-    .sort((a, b) => b.pts - a.pts || Number(b.gd) - Number(a.gd) || b.gf - a.gf || a.ga - b.ga || a.n.localeCompare(b.n))
+    .sort(rankTeams)
     .map((team, index) => `
       <div class="overall-row">
         <span>${index + 1}</span><span class="overall-team"><img class="flag" src="${team.l}" alt="">${escapeHtml(team.n)}</span><span>${team.placement}</span>${renderForm(team)}<span>${team.pts}</span><span>${team.gd}</span><span>${team.gf}</span>
@@ -211,7 +215,8 @@ function knockoutTeams() {
       if (!team || seen.has(team.n)) return false;
       seen.add(team.n);
       return true;
-    });
+    })
+    .sort(rankTeams);
 }
 
 function renderForm(team) {
