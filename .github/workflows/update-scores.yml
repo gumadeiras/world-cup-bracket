@@ -26,7 +26,17 @@ jobs:
           now=$(TZ=America/New_York date +%Y%m%d%H)
           if [ "$now" -le 2026062818 ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "cleanup=true" >> "$GITHUB_OUTPUT"
           fi
+      - name: Remove expired updater
+        if: steps.window.outputs.cleanup == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/update-scores.yml
+          git commit -m "Remove expired QBio score updater"
+          git push
       - name: Update scores
         if: steps.window.outputs.run == 'true'
         run: node script/update_qbiowc_games.mjs
