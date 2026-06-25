@@ -123,6 +123,7 @@ const standings = data.standings || [];
 const groupResults = data.groupResults || [];
 const allPlayers = [...new Set(Object.values(data.players || {}).flat())].sort();
 const standingsEl = document.querySelector("[data-standings]");
+const overallStandingsEl = document.querySelector("[data-overall-standings]");
 const standingsUpdatedEl = document.querySelector("[data-standings-updated]");
 const leaderboardEl = document.querySelector("[data-leaderboard]");
 const leaderboardUpdatedEl = document.querySelector("[data-leaderboard-updated]");
@@ -157,6 +158,13 @@ function renderStandings() {
           <span class="group-team"><span class="group-team-name">${team.n}</span>${index === 2 && liveThirds.has(thirdPlaceKey(team)) ? `<em class="third-badge">+3rd</em>` : ""}</span>${renderForm(team)}<span>${team.pts}</span><span>${team.gd}</span><span>${team.gf}</span>
         </div>`).join("")}
     </article>`).join("");
+  overallStandingsEl.innerHTML = standings
+    .flatMap((group) => group.teams.map((team, index) => ({ ...team, placement: `${index + 1}${group.g}` })))
+    .sort((a, b) => b.pts - a.pts || Number(b.gd) - Number(a.gd) || b.gf - a.gf || a.ga - b.ga || a.n.localeCompare(b.n))
+    .map((team, index) => `
+      <div class="overall-row">
+        <span>${index + 1}</span><span class="overall-team"><img class="flag" src="${team.l}" alt="">${escapeHtml(team.n)}</span><span>${team.placement}</span>${renderForm(team)}<span>${team.pts}</span><span>${team.gd}</span><span>${team.gf}</span>
+      </div>`).join("");
 }
 
 function renderForm(team) {
@@ -428,6 +436,32 @@ function bindMatchControls(root) {
     input.addEventListener("change", (event) => {
       const [id, side, index] = event.target.dataset.scorer.split(":");
       setScorer(id, side, Number(index), event.target.value);
+    });
+  });
+}
+
+function enhanceDetails() {
+  document.querySelectorAll(".smooth-details").forEach((details) => {
+    const summary = details.querySelector("summary");
+    const body = details.querySelector(".details-body");
+    if (!summary || !body || details.dataset.smooth) return;
+    details.dataset.smooth = "true";
+    details.classList.add("is-smooth");
+    body.style.height = details.open ? "auto" : "0px";
+    summary.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (details.open) {
+        body.style.height = `${body.scrollHeight}px`;
+        body.offsetHeight;
+        body.style.height = "0px";
+        body.addEventListener("transitionend", () => details.removeAttribute("open"), { once: true });
+      } else {
+        details.setAttribute("open", "");
+        body.style.height = "0px";
+        body.offsetHeight;
+        body.style.height = `${body.scrollHeight}px`;
+        body.addEventListener("transitionend", () => body.style.height = "auto", { once: true });
+      }
     });
   });
 }
@@ -844,6 +878,7 @@ document.querySelector("[data-reset]").addEventListener("click", () => {
 renderStandings();
 renderLeaderboard();
 render();
+enhanceDetails();
 window.addEventListener("resize", () => {
   layoutBracketCards();
   drawBracketLines();
