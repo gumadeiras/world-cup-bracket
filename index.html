@@ -127,6 +127,11 @@
       mask: url("./assets/trophy-mono.svg") center / contain no-repeat;
     }
 
+    .mark .trophy-mask {
+      width: 13px;
+      height: 32px;
+    }
+
     .mark img {
       width: auto;
       height: 32px;
@@ -646,6 +651,21 @@
       text-transform: uppercase;
     }
 
+    .slot-legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 8px;
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+    }
+
+    .slot-legend .status-badge:not(:first-child) {
+      margin-left: 8px;
+    }
+
     .randomize-wrap {
       display: flex;
       flex-wrap: wrap;
@@ -763,6 +783,29 @@
       text-transform: uppercase;
     }
 
+    .status-badge {
+      justify-self: start;
+      width: max-content;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--muted);
+      padding: 2px 5px;
+      font-size: 0.56rem;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .status-badge.locked {
+      border-color: var(--green);
+      background: var(--green);
+      color: var(--paper);
+    }
+
+    .status-badge.projected {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
     .team {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 42px;
@@ -807,6 +850,26 @@
       color: var(--muted);
       font-size: 0.64rem;
       text-transform: uppercase;
+    }
+
+    .slot em {
+      display: inline-block;
+      margin-left: 4px;
+      border: 1px solid var(--line);
+      padding: 1px 4px;
+      font-style: normal;
+      line-height: 1;
+    }
+
+    .slot.locked em {
+      border-color: var(--green);
+      background: var(--green);
+      color: var(--paper);
+    }
+
+    .slot.projected em {
+      border-color: var(--gold);
+      color: var(--gold);
     }
 
     .flag {
@@ -1137,6 +1200,7 @@
       <span class="randomize-label">decision fatigue?</span>
       <button type="button" data-randomize></button>
     </div>
+    <p class="slot-legend"><span class="status-badge locked">locked</span> confirmed slot <span class="status-badge projected">projected</span> current standings</p>
     <p class="scroll-hint">hold shift while scrolling to move across the knockout bracket</p>
     <section class="board" data-board aria-label="2026 World Cup prediction bracket"></section>
 

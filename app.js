@@ -324,17 +324,30 @@ function currentTeam(value) {
   return standings.find((group) => group.g === match[2])?.teams[Number(match[1]) - 1] || null;
 }
 
-function slotInfo(value) {
-  const team = currentTeam(value);
-  if (team) return { main: team.n, sub: `${value} current`, team };
-  if (/^3/.test(value)) return { main: value, sub: "best third-place pool" };
-  if (/^W\d+/.test(value)) return { main: value.replace("W", "M"), sub: "winner" };
-  if (/^L\d+/.test(value)) return { main: value.replace("L", "M"), sub: "semifinal loser" };
-  return { main: value, sub: "predicted" };
+function groupComplete(group) {
+  return group?.teams.every((team) => Number(team.gp) >= 3);
 }
 
-function renderSlot(info) {
-  return `<span class="slot">${info.team ? `<img class="flag" src="${info.team.l}" alt="">` : ""}<strong>${escapeHtml(info.main)}</strong><small>${escapeHtml(info.sub)}</small></span>`;
+function slotStatus(value) {
+  const match = /^([123])([A-L])$/.exec(value);
+  if (match) return groupComplete(standings.find((group) => group.g === match[2])) ? "locked" : "projected";
+  if (/^3/.test(value)) return "pending";
+  if (/^[WL]\d+/.test(value)) return "pending";
+  return currentTeam(value) ? "projected" : "pending";
+}
+
+function slotInfo(value) {
+  const team = currentTeam(value);
+  const status = slotStatus(value);
+  if (team) return { main: team.n, sub: value, team, status };
+  if (/^3/.test(value)) return { main: value, sub: "best third-place pool", status };
+  if (/^W\d+/.test(value)) return { main: value.replace("W", "M"), sub: "winner", status };
+  if (/^L\d+/.test(value)) return { main: value.replace("L", "M"), sub: "semifinal loser", status };
+  return { main: value, sub: "predicted", status };
+}
+
+function renderSlot(info, showStatus = false) {
+  return `<span class="slot ${showStatus ? info.status || "pending" : ""}">${info.team ? `<img class="flag" src="${info.team.l}" alt="">` : ""}<strong>${escapeHtml(info.main)}</strong><small>${escapeHtml(info.sub)}${showStatus ? ` <em>${escapeHtml(info.status || "pending")}</em>` : ""}</small></span>`;
 }
 
 function renderChampion() {
@@ -370,17 +383,18 @@ function renderMatch(match, index, stage) {
   const homeInfo = slotInfo(home);
   const awayInfo = slotInfo(away);
   const boosted = isBoosted(homeInfo, awayInfo);
+  const showStatus = stage === "round of 32";
   return `
         <article class="match ${stage === "final" ? "final" : ""} ${tied ? "tied" : ""} ${boosted ? "boosted" : ""}" data-match-id="${id}" style="animation-delay:${index * 24}ms">
           <span class="match-id">M${id}</span>${boosted ? `<span class="boost-badge">2x points</span>` : ""}
           <time class="kickoff">${kickoffs[id]}</time>
           <div class="team ${win === home ? "winner" : ""}">
-        ${renderSlot(homeInfo)}
+        ${renderSlot(homeInfo, showStatus)}
         <input class="score" data-score="${id}:home" type="number" min="0" max="99" inputmode="numeric" value="${data.home ?? ""}" aria-label="match ${id} ${home} score">
         ${renderScorers(data, id, "home", homeInfo)}
       </div>
       <div class="team ${win === away ? "winner" : ""}">
-        ${renderSlot(awayInfo)}
+        ${renderSlot(awayInfo, showStatus)}
         <input class="score" data-score="${id}:away" type="number" min="0" max="99" inputmode="numeric" value="${data.away ?? ""}" aria-label="match ${id} ${away} score">
         ${renderScorers(data, id, "away", awayInfo)}
       </div>
