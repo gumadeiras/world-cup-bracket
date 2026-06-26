@@ -53,8 +53,21 @@ function stat(athlete, name) {
   return (athlete.statistics || athlete.stats)?.find((item) => item.name === name)?.value || 0;
 }
 
+function addPlayer(players, team, name, goals, games) {
+  const key = `${team.n}:${name}`;
+  const player = players.get(key) || { name, country: team.n, countryCode: team.a, goals: 0, games: 0 };
+  player.goals += goals;
+  player.games += games;
+  players.set(key, player);
+}
+
 async function scorerStats(teamMeta, results) {
   const players = new Map();
+  const teamGoals = new Map();
+  for (const result of results) {
+    teamGoals.set(result.home, (teamGoals.get(result.home) || 0) + result.homeScore);
+    teamGoals.set(result.away, (teamGoals.get(result.away) || 0) + result.awayScore);
+  }
   const summaries = await Promise.all(results.map(async (result) => {
     const response = await fetch(summaryUrl(result.id));
     if (!response.ok) throw new Error(`ESPN summary failed for ${result.id}: ${response.status}`);
@@ -70,13 +83,18 @@ async function scorerStats(teamMeta, results) {
         const goals = stat(entry, "totalGoals");
         const games = stat(entry, "appearances");
         if (!name || (!goals && !games)) continue;
-        const key = `${team.n}:${name}`;
-        const player = players.get(key) || { name, country: team.n, countryCode: team.a, goals: 0, games: 0 };
-        player.goals += goals;
-        player.games += games;
-        players.set(key, player);
+        addPlayer(players, team, name, goals, games);
       }
     }
+  }
+
+  for (const [teamName, total] of teamGoals) {
+    const team = teamMeta.get(teamName);
+    const playerGoals = [...players.values()]
+      .filter((player) => player.country === teamName)
+      .reduce((sum, player) => sum + player.goals, 0);
+    const diff = total - playerGoals;
+    if (team && diff > 0) addPlayer(players, team, "own goal", diff, diff);
   }
 
   const leaders = [...players.values()]

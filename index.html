@@ -622,11 +622,28 @@
     }
 
     .scorer-card b {
-      display: inline-flex;
+      display: flex;
+      justify-content: space-between;
       gap: 7px;
       align-items: center;
       min-height: 28px;
       text-transform: uppercase;
+    }
+
+    .scorer-card b span {
+      display: inline-flex;
+      min-width: 0;
+      gap: 7px;
+      align-items: center;
+    }
+
+    .scorer-card b em {
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      padding: 2px 5px;
+      color: var(--green);
+      font-style: normal;
+      font-variant-numeric: tabular-nums;
     }
 
     .scorer-card--overall {

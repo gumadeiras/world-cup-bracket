@@ -187,9 +187,11 @@ function renderScorerCards() {
       }).join("") || `<div class="scorer-empty">waiting for ESPN scorer stats</div>`}
     </article>
     ${teams.map((team) => {
-      const rows = (scorers.teams?.[team.n] || []).slice(0, 4);
+      const teamRows = scorers.teams?.[team.n] || [];
+      const playerRows = teamRows.filter((player) => player.name !== "own goal").slice(0, 5);
+      const rows = playerRows.length === 5 ? playerRows : teamRows.slice(0, 5);
       return `<article class="scorer-card">
-        <b><img class="flag" src="${team.l}" alt="">${escapeHtml(team.n)}</b>
+        <b><span><img class="flag" src="${team.l}" alt="">${escapeHtml(team.n)}</span> <em>${team.gf} ${team.gf === 1 ? "goal" : "goals"}</em></b>
         <div class="scorer-row scorer-head"><span>name</span><span>goals</span><span>games</span></div>
         ${rows.map((player) => `
           <div class="scorer-row"><span>${escapeHtml(player.name)}</span><span>${player.goals}</span><span>${player.games}</span></div>
