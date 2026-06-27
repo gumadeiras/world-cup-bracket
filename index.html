@@ -41,6 +41,8 @@
     body {
       margin: 0;
       min-height: 100vh;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
       color: var(--ink);
       font-family: "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
       font-size: var(--type-md);
@@ -550,6 +552,7 @@
       border: 1px solid var(--line);
       background: rgba(255, 250, 240, 0.78);
       padding: 8px;
+      overflow-x: auto;
     }
 
     .overall summary {
@@ -561,10 +564,9 @@
 
     .overall-row {
       display: grid;
-      grid-template-columns: 28px minmax(100px, 1fr) 58px 46px repeat(3, 38px);
+      grid-template-columns: 28px minmax(76px, 1fr) 48px 42px repeat(3, 34px);
       gap: 6px;
       align-items: center;
-      min-width: 360px;
       border-top: 1px solid var(--line);
       padding: 6px;
       font-size: var(--type-sm);
