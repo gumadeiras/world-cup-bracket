@@ -4,8 +4,18 @@ import fs from "node:fs";
 
 const dataPath = "data.js";
 const prefix = "window.QBIOWC_DATA=";
-const scoreboardUrl = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260628&limit=200";
+const scoreboardUrl = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260720&limit=200";
 const summaryUrl = (eventId) => `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=${eventId}`;
+const knockoutKickoffs = {
+  "2026-06-28T19:00": 73, "2026-06-29T20:30": 74, "2026-06-30T01:00": 75, "2026-06-29T17:00": 76,
+  "2026-06-30T21:00": 77, "2026-06-30T17:00": 78, "2026-07-01T01:00": 79, "2026-07-01T16:00": 80,
+  "2026-07-02T00:00": 81, "2026-07-01T20:00": 82, "2026-07-02T23:00": 83, "2026-07-02T19:00": 84,
+  "2026-07-03T03:00": 85, "2026-07-03T22:00": 86, "2026-07-04T01:30": 87, "2026-07-03T18:00": 88,
+  "2026-07-04T21:00": 89, "2026-07-04T17:00": 90, "2026-07-05T20:00": 91, "2026-07-06T00:00": 92,
+  "2026-07-06T19:00": 93, "2026-07-07T00:00": 94, "2026-07-07T16:00": 95, "2026-07-07T20:00": 96,
+  "2026-07-09T20:00": 97, "2026-07-10T19:00": 98, "2026-07-11T21:00": 99, "2026-07-12T01:00": 100,
+  "2026-07-14T19:00": 101, "2026-07-15T19:00": 102, "2026-07-18T21:00": 103, "2026-07-19T19:00": 104
+};
 
 function readData() {
   const text = fs.readFileSync(dataPath, "utf8").trim();
@@ -70,8 +80,13 @@ function addTeamPlayer(teamPlayerNames, team, name) {
   teamPlayerNames.get(team)?.set(playerNameKey(name), name);
 }
 
+function kickoffKey(date) {
+  return new Date(date).toISOString().slice(0, 16);
+}
+
 async function scorerStats(teamMeta, results, existingPlayers = {}) {
   const players = new Map();
+  const matchScorers = new Map(results.map((result) => [result.id, { home: [], away: [] }]));
   const teamPlayerNames = new Map([...teamMeta.keys()].map((team) => [
     team,
     new Map((existingPlayers[team] || []).map((name) => [playerNameKey(name), name]))
@@ -84,21 +99,32 @@ async function scorerStats(teamMeta, results, existingPlayers = {}) {
   const summaries = await Promise.all(results.map(async (result) => {
     const response = await fetch(summaryUrl(result.id));
     if (!response.ok) throw new Error(`ESPN summary failed for ${result.id}: ${response.status}`);
-    return response.json();
+    return { result, summary: await response.json() };
   }));
 
-  for (const summary of summaries) {
+  for (const { result, summary } of summaries) {
+    const matchGoals = { home: 0, away: 0 };
     for (const roster of summary.rosters || []) {
       const team = teamMeta.get(roster.team?.displayName);
       if (!team) continue;
+      const side = team.n === result.home ? "home" : team.n === result.away ? "away" : null;
       for (const entry of roster.roster || []) {
         const name = entry.athlete?.displayName;
         addTeamPlayer(teamPlayerNames, team.n, name);
         const goals = stat(entry, "totalGoals");
         const games = stat(entry, "appearances");
+        if (side && name && goals) {
+          matchGoals[side] += goals;
+          matchScorers.get(result.id)[side].push(...Array(goals).fill(name));
+        }
         if (!name || (!goals && !games)) continue;
         addPlayer(players, team, name, goals, games);
       }
+    }
+    for (const side of ["home", "away"]) {
+      const score = result[`${side}Score`];
+      const ownGoals = score - matchGoals[side];
+      if (ownGoals > 0) matchScorers.get(result.id)[side].push(...Array(ownGoals).fill("own goal"));
     }
   }
 
@@ -123,7 +149,8 @@ async function scorerStats(teamMeta, results, existingPlayers = {}) {
     players: Object.fromEntries([...teamPlayerNames].map(([team, names]) => [
       team,
       [...names.values()].sort((a, b) => a.localeCompare(b))
-    ]))
+    ])),
+    matchScorers
   };
 }
 
@@ -154,13 +181,18 @@ async function main() {
     const homeName = home.team.displayName;
     const awayName = away.team.displayName;
     if (!teamMeta.has(homeName) || !teamMeta.has(awayName)) continue;
-    results.push({ id: event.id, date: event.date, home: homeName, away: awayName, homeScore: Number(home.score), awayScore: Number(away.score) });
+    const homeScore = Number(home.score);
+    const awayScore = Number(away.score);
+    const winnerSide = home.winner ? "home" : away.winner ? "away" : homeScore > awayScore ? "home" : awayScore > homeScore ? "away" : "";
+    results.push({ id: event.id, date: event.date, home: homeName, away: awayName, homeScore, awayScore, winnerSide });
   }
 
   const groups = Object.fromEntries(data.standings.map((group) => [group.g, new Map(group.teams.map((team) => [team.n, blankTeam(team)]))]));
+  const groupResults = [];
   for (const result of results) {
     const group = teamGroup.get(result.home);
     if (!group || group !== teamGroup.get(result.away)) continue;
+    groupResults.push(result);
     addResult(groups[group].get(result.home), result.homeScore, result.awayScore);
     addResult(groups[group].get(result.away), result.awayScore, result.homeScore);
   }
@@ -172,10 +204,15 @@ async function main() {
     }).sort((a, b) => b.pts - a.pts || Number(b.gd) - Number(a.gd) || b.gf - a.gf || a.ga - b.ga || a.n.localeCompare(b.n));
   }
 
-  data.groupResults = results;
+  data.groupResults = groupResults;
   const stats = await scorerStats(teamMeta, results, data.players || {});
   data.scorers = { overall: stats.overall, teams: stats.teams };
   data.players = stats.players;
+  data.matchResults = Object.fromEntries(results.flatMap((result) => {
+    const matchId = knockoutKickoffs[kickoffKey(result.date)];
+    const scorers = stats.matchScorers.get(result.id) || { home: [], away: [] };
+    return matchId ? [[matchId, { ...result, homeScorers: scorers.home, awayScorers: scorers.away }]] : [];
+  }));
   data.updated = timestamp();
   writeData(data);
   console.log(`Updated ${results.length} completed World Cup matches.`);
