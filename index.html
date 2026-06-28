@@ -38,6 +38,8 @@
 
     * { box-sizing: border-box; }
 
+    [hidden] { display: none !important; }
+
     body {
       margin: 0;
       min-height: 100vh;
@@ -368,6 +370,241 @@
       display: inline-flex;
       gap: 7px;
       align-items: center;
+    }
+
+    .leader-link,
+    .back-link {
+      color: var(--ink);
+      text-decoration-color: var(--red);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+
+    .entry-detail {
+      display: grid;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .entry-header,
+    .entry-stats,
+    .entry-round {
+      border: 1px solid var(--line);
+      background: rgba(255, 250, 240, 0.78);
+      box-shadow: var(--shadow);
+    }
+
+    .entry-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      padding: 14px;
+      border-color: var(--ink);
+    }
+
+    .entry-header p,
+    .entry-header h2,
+    .entry-round h3 {
+      margin: 0;
+      text-transform: uppercase;
+    }
+
+    .entry-header p,
+    .entry-round h3 span,
+    .entry-match-head time,
+    .entry-match-head small,
+    .entry-team small {
+      color: var(--muted);
+    }
+
+    .entry-header h2 {
+      font-size: clamp(1.5rem, 5vw, 3rem);
+      line-height: 1;
+    }
+
+    .entry-total {
+      display: grid;
+      place-items: center;
+      min-width: 88px;
+      min-height: 88px;
+      border: 1px solid var(--red);
+      color: var(--red);
+      font-variant-numeric: tabular-nums;
+      text-transform: uppercase;
+    }
+
+    .entry-total b {
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .entry-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: stretch;
+      padding: 10px;
+      text-transform: uppercase;
+    }
+
+    .entry-stats > span {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid var(--line);
+      padding: 4px 7px;
+      background: rgba(255, 250, 240, 0.55);
+    }
+
+    .entry-boost {
+      display: inline-flex;
+      gap: 7px;
+      align-items: center;
+      font-style: normal;
+    }
+
+    .entry-round {
+      padding: 10px;
+    }
+
+    .entry-round h3 {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+      font-size: var(--type-md);
+    }
+
+    .entry-matches {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 10px;
+      padding-top: 10px;
+    }
+
+    .entry-match {
+      border: 1px solid var(--line);
+      background: rgba(255, 250, 240, 0.72);
+      padding: 8px;
+    }
+
+    .entry-match.boosted {
+      border-color: var(--gold);
+      box-shadow: 7px 7px 0 rgba(203, 148, 38, 0.22);
+    }
+
+    .entry-match.exact {
+      border-color: var(--green);
+      background: linear-gradient(0deg, rgba(42, 118, 76, 0.1), rgba(42, 118, 76, 0.1)), rgba(255, 250, 240, 0.72);
+    }
+
+    .entry-match.result {
+      border-color: var(--gold);
+      background: linear-gradient(0deg, rgba(203, 148, 38, 0.11), rgba(203, 148, 38, 0.11)), rgba(255, 250, 240, 0.72);
+    }
+
+    .entry-match.scorer-hit {
+      outline: 1px dashed rgba(42, 118, 76, 0.45);
+      outline-offset: -5px;
+    }
+
+    .entry-match-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: start;
+      margin-bottom: 8px;
+      font-size: var(--type-sm);
+      text-transform: uppercase;
+    }
+
+    .entry-match-head > span {
+      display: grid;
+      justify-items: end;
+      text-align: right;
+    }
+
+    .entry-points {
+      color: var(--green);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .entry-points.pending {
+      color: var(--muted);
+    }
+
+    .entry-score-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      justify-content: flex-end;
+      max-width: 160px;
+    }
+
+    .entry-score-chips em {
+      border: 1px solid var(--line);
+      padding: 1px 4px;
+      background: rgba(255, 250, 240, 0.72);
+      font-style: normal;
+      white-space: nowrap;
+    }
+
+    .entry-score-chips .exact,
+    .entry-score-chips .scorers {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .entry-score-chips .result,
+    .entry-score-chips .boost {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    .entry-score-chips .miss {
+      color: var(--muted);
+    }
+
+    .entry-team {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 44px;
+      gap: 6px;
+      align-items: center;
+      padding: 7px;
+    }
+
+    .entry-team.winner {
+      background: var(--boost);
+      color: var(--green);
+    }
+
+    .entry-team span {
+      display: inline-flex;
+      min-width: 0;
+      gap: 7px;
+      align-items: center;
+    }
+
+    .entry-team strong {
+      border: 1px solid var(--line);
+      padding: 6px 0;
+      text-align: center;
+      font-size: var(--type-lg);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .entry-team small {
+      grid-column: 1 / -1;
+      overflow-wrap: anywhere;
+    }
+
+    .entry-empty {
+      margin: 0;
+      color: var(--muted);
+      text-transform: uppercase;
     }
 
     .rules {
@@ -1269,10 +1506,12 @@
   <main class="shell">
     <header class="topbar">
       <div>
-        <div class="mark"><span class="trophy-mask" aria-hidden="true"></span><span>world cup 2026 / predictions</span></div>
+        <div class="mark"><img src="./assets/trophy-color.svg" alt="" aria-hidden="true"><span>world cup 2026 / predictions</span></div>
         <h1>QBio bracket</h1>
       </div>
     </header>
+
+    <section class="entry-detail" data-entry-detail hidden></section>
 
     <section class="panel quickstart" aria-label="quick start">
       <p><b>1. enter info</b><span>name, bracket name, email, boost country.</span></p>

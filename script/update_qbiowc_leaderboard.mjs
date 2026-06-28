@@ -115,6 +115,10 @@ function countScorers(predicted = [], actual = []) {
 }
 
 export function scorePicks(picks, data) {
+  return scorePicksDetailed(picks, data).total;
+}
+
+export function scorePicksDetailed(picks, data) {
   const actualRaw = data.matchResults || {};
   const actualCache = new Map();
   const predictedCache = new Map();
@@ -187,6 +191,7 @@ export function scorePicks(picks, data) {
   }
 
   const total = blankScore();
+  const matches = [];
   for (const id of Object.keys(actualRaw)) {
     const actual = actualMatch(id);
     const predicted = predictedTeams(id);
@@ -200,13 +205,22 @@ export function scorePicks(picks, data) {
       countScorers(pick.awayScorers, actual.awayScorers)
     );
     const multiplier = [actual.home, actual.away].includes(picks.boostCountry) ? 2 : 1;
+    const points = ((exact ? 3 : result ? 1 : 0) + scorers) * multiplier;
 
     total.exact += exact ? 1 : 0;
     total.result += result ? 1 : 0;
     total.scorers += scorers;
-    total.points += ((exact ? 3 : result ? 1 : 0) + scorers) * multiplier;
+    total.points += points;
+    matches.push({
+      id,
+      points,
+      exact: exact ? 1 : 0,
+      result: result ? 1 : 0,
+      scorers,
+      multiplier
+    });
   }
-  return total;
+  return { total, matches };
 }
 
 function parsePicks(row) {
@@ -216,6 +230,21 @@ function parsePicks(row) {
   } catch {
     return {};
   }
+}
+
+function sanitizePicks(picks) {
+  return {
+    boostCountry: picks.boostCountry || "",
+    matches: Object.fromEntries(Object.entries(picks.matches || {})
+      .filter(([id]) => matchesById.has(String(id)))
+      .map(([id, match]) => [id, {
+        home: match.home ?? null,
+        away: match.away ?? null,
+        advance: match.advance || "",
+        homeScorers: Array.isArray(match.homeScorers) ? match.homeScorers.filter(Boolean) : [],
+        awayScorers: Array.isArray(match.awayScorers) ? match.awayScorers.filter(Boolean) : []
+      }]))
+  };
 }
 
 async function main() {
@@ -249,11 +278,17 @@ async function main() {
     .filter((row) => !fakePicks[row.bracketName]);
   const fakeSeeded = Object.values(fakePicks)
     .filter((picks) => !formBracketNames.has(picks.bracketName))
-    .map((picks) => ({
-      bracketName: picks.bracketName,
-      boostCountry: picks.boostCountry,
-      ...scorePicks(picks, data)
-    }));
+    .map((picks) => {
+      const score = scorePicksDetailed(picks, data);
+      return {
+        id: picks.bracketName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+        bracketName: picks.bracketName,
+        boostCountry: picks.boostCountry,
+        ...score.total,
+        picks: sanitizePicks(picks),
+        matchBreakdown: score.matches
+      };
+    });
 
   data.leaderboard = [
     ...existingSeeded,
@@ -261,10 +296,14 @@ async function main() {
     ...[...latestByEmail.values()].map((row) => {
       const picks = parsePicks(row);
       picks.boostCountry ||= row["boost country"] || "";
+      const score = scorePicksDetailed(picks, data);
       return {
+        id: (row["bracket name"] || row.name || "Unnamed bracket").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
         bracketName: row["bracket name"] || row.name || "Unnamed bracket",
         boostCountry: picks.boostCountry,
-        ...scorePicks(picks, data)
+        ...score.total,
+        picks: sanitizePicks(picks),
+        matchBreakdown: score.matches
       };
     })
   ].sort((a, b) => a.bracketName.localeCompare(b.bracketName));

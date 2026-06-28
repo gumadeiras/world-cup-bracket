@@ -71,6 +71,7 @@ const stateKey = "qbiowc-picks-v1";
 const randomizeLabelKey = "qbiowc-randomize-labels-v1";
 const publicUrl = "https://qbiowc.gumadeiras.com/";
 const state = JSON.parse(localStorage.getItem(stateKey) || '{"matches":{}}');
+let activePicks = state;
 const data = window.QBIOWC_DATA || { standings: [], players: {} };
 const googleFormConfig = {
   action: "https://docs.google.com/forms/d/e/1FAIpQLSf9jfkZ6zktmFjB9bWFOQNOldxuLlhWd9emTUtTLZKgnCxYbw/formResponse",
@@ -128,6 +129,7 @@ const scorerCardsEl = document.querySelector("[data-scorer-cards]");
 const standingsUpdatedEl = document.querySelector("[data-standings-updated]");
 const leaderboardEl = document.querySelector("[data-leaderboard]");
 const leaderboardUpdatedEl = document.querySelector("[data-leaderboard-updated]");
+const entryDetailEl = document.querySelector("[data-entry-detail]");
 const board = document.querySelector("[data-board]");
 const toast = document.querySelector("[data-toast]");
 
@@ -265,7 +267,7 @@ function label(raw) {
 }
 
 function pick(id) {
-  return state.matches[id] || {};
+  return activePicks.matches?.[id] || {};
 }
 
 function thirdPlaceSlots() {
@@ -369,11 +371,107 @@ function renderLeaderboard() {
   );
   leaderboardEl.innerHTML = rows.length ? rows.map((row, index) => `
     <div class="leader-row">
-      <span>${index + 1}</span><span>${escapeHtml(row.bracketName)}</span><span class="leader-boost">${renderBoostCountry(row.boostCountry)}</span><span>${row.points}</span><span>${row.exact}</span><span>${row.result}</span><span>${row.scorers}</span>
+      <span>${index + 1}</span><span><a class="leader-link" href="?entry=${escapeAttribute(entryId(row, index))}">${escapeHtml(row.bracketName)}</a></span><span class="leader-boost">${renderBoostCountry(row.boostCountry)}</span><span>${row.points}</span><span>${row.exact}</span><span>${row.result}</span><span>${row.scorers}</span>
     </div>`).join("") : `
     <div class="leader-row">
       <span>-</span><span>TBD</span><span>-</span><span>0</span><span>0</span><span>0</span><span>0</span>
     </div>`;
+}
+
+function slug(value) {
+  return String(value || "entry").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+function entryId(row, index = 0) {
+  return row.id || slug(row.bracketName || `entry-${index + 1}`);
+}
+
+function withPicks(picks, callback) {
+  const previous = activePicks;
+  activePicks = picks || { matches: {} };
+  try {
+    return callback();
+  } finally {
+    activePicks = previous;
+  }
+}
+
+function scoreLine(row, id) {
+  const score = (row.matchBreakdown || []).find((match) => String(match.id) === String(id));
+  if (!score) return `<span class="entry-points pending">pending</span><small>not scored yet</small>`;
+  const chips = [
+    score.exact ? ["exact", "exact"] : score.result ? ["result", "winner"] : ["miss", "score miss"],
+    score.scorers ? ["scorers", `${score.scorers} scorer${score.scorers === 1 ? "" : "s"}`] : null,
+    score.multiplier === 2 ? ["boost", "2x"] : null
+  ].filter(Boolean);
+  return `<span class="entry-points">+${score.points}</span><small class="entry-score-chips">${chips.map(([kind, text]) => `<em class="${kind}">${escapeHtml(text)}</em>`).join("")}</small>`;
+}
+
+function renderEntryTeam(info, score, scorers, winnerName) {
+  return `<div class="entry-team ${winnerName === info.main ? "winner" : ""}">
+    <span>${info.team ? `<img class="flag" src="${info.team.l}" alt="">` : ""}<b>${escapeHtml(info.main || "-")}</b></span>
+    <strong>${score ?? "-"}</strong>
+    <small>${escapeHtml((scorers || []).filter(Boolean).join(", ") || "no scorers picked")}</small>
+  </div>`;
+}
+
+function renderEntryMatch(row, match) {
+  const [id, homeRaw, awayRaw] = match;
+  const pickData = pick(id);
+  const score = (row.matchBreakdown || []).find((item) => String(item.id) === String(id));
+  const home = label(resolveThirdSlot(homeRaw, id));
+  const away = label(resolveThirdSlot(awayRaw, id));
+  const win = winner(id);
+  const boosted = row.boostCountry && [slotInfo(home).team?.n, slotInfo(away).team?.n].includes(row.boostCountry);
+  return `<article class="entry-match ${boosted ? "boosted" : ""} ${score?.exact ? "exact" : score?.result ? "result" : ""} ${score?.scorers ? "scorer-hit" : ""}">
+    <div class="entry-match-head"><time>${kickoffs[id]}</time><span>${scoreLine(row, id)}</span></div>
+    ${renderEntryTeam(slotInfo(home), pickData.home, pickData.homeScorers, win)}
+    ${renderEntryTeam(slotInfo(away), pickData.away, pickData.awayScorers, win)}
+  </article>`;
+}
+
+function kickoffStamp(id) {
+  const match = /^(\w+) (\w+) (\d+) · (.+)$/.exec(kickoffs[id] || "");
+  return match ? Date.parse(`${match[2]} ${match[3]}, 2026 ${match[4]}`) : Number(id);
+}
+
+function dateOrderedMatches(round) {
+  return [...round.matches].sort((a, b) => kickoffStamp(a[0]) - kickoffStamp(b[0]) || a[0] - b[0]);
+}
+
+function renderEntryDetail() {
+  const wanted = new URLSearchParams(location.search).get("entry");
+  if (!wanted) return false;
+  const row = (data.leaderboard || []).find((entry, index) => entryId(entry, index) === wanted);
+  document.querySelectorAll("main > :not(.topbar):not([data-entry-detail]):not(dialog):not(.toast)").forEach((node) => node.hidden = true);
+  entryDetailEl.hidden = false;
+
+  if (!row) {
+    entryDetailEl.innerHTML = `<a class="back-link" href="./">back to leaderboard</a><h2>bracket not found</h2>`;
+    return true;
+  }
+
+  const picks = row.picks || { boostCountry: row.boostCountry, matches: {} };
+  entryDetailEl.innerHTML = withPicks(picks, () => `
+    <a class="back-link" href="./">back to leaderboard</a>
+    <header class="entry-header">
+      <div><p>bracket detail</p><h2>${escapeHtml(row.bracketName)}</h2></div>
+      <div class="entry-total"><b>${row.points || 0}</b><span>pts</span></div>
+    </header>
+    <div class="entry-stats">
+      <span>boost <em class="entry-boost">${renderBoostCountry(row.boostCountry)}</em></span>
+      <span>${row.exact || 0} exact</span>
+      <span>${row.result || 0} result</span>
+      <span>${row.scorers || 0} scorers</span>
+    </div>
+    ${row.picks ? rounds.map((round) => `
+      <section class="entry-round">
+        <h3>${round.name}<span>${round.date}</span></h3>
+        <div class="entry-matches">${dateOrderedMatches(round).map((match) => renderEntryMatch(row, match)).join("")}</div>
+      </section>
+    `).join("") : `<p class="entry-empty">No submitted picks saved for this seeded row.</p>`}
+  `);
+  return true;
 }
 
 function renderBoostCountry(country) {
@@ -926,12 +1024,14 @@ document.querySelector("[data-reset]").addEventListener("click", () => {
   location.reload();
 });
 
-renderStandings();
-renderLeaderboard();
-render();
-enhanceDetails();
-window.addEventListener("resize", () => {
-  layoutBracketCards();
-  drawBracketLines();
-  updateScrollHint();
-});
+if (!renderEntryDetail()) {
+  renderStandings();
+  renderLeaderboard();
+  render();
+  enhanceDetails();
+  window.addEventListener("resize", () => {
+    layoutBracketCards();
+    drawBracketLines();
+    updateScrollHint();
+  });
+}
