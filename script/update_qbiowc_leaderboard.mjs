@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from "node:fs";
+import { fakePicks } from "./fake_qbiowc_picks.mjs";
 
 const dataPath = "data.js";
 const prefix = "window.QBIOWC_DATA=";
@@ -244,10 +245,19 @@ async function main() {
   const data = readData();
   const existingSeeded = (data.leaderboard || [])
     .filter((row) => !removedBracketNames.has(row.bracketName))
-    .filter((row) => !formBracketNames.has(row.bracketName));
+    .filter((row) => !formBracketNames.has(row.bracketName))
+    .filter((row) => !fakePicks[row.bracketName]);
+  const fakeSeeded = Object.values(fakePicks)
+    .filter((picks) => !formBracketNames.has(picks.bracketName))
+    .map((picks) => ({
+      bracketName: picks.bracketName,
+      boostCountry: picks.boostCountry,
+      ...scorePicks(picks, data)
+    }));
 
   data.leaderboard = [
     ...existingSeeded,
+    ...fakeSeeded,
     ...[...latestByEmail.values()].map((row) => {
       const picks = parsePicks(row);
       picks.boostCountry ||= row["boost country"] || "";
