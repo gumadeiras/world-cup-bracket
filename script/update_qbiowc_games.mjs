@@ -61,8 +61,21 @@ function addPlayer(players, team, name, goals, games) {
   players.set(key, player);
 }
 
-async function scorerStats(teamMeta, results) {
+function playerNameKey(name) {
+  return name.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+}
+
+function addTeamPlayer(teamPlayerNames, team, name) {
+  if (!name) return;
+  teamPlayerNames.get(team)?.set(playerNameKey(name), name);
+}
+
+async function scorerStats(teamMeta, results, existingPlayers = {}) {
   const players = new Map();
+  const teamPlayerNames = new Map([...teamMeta.keys()].map((team) => [
+    team,
+    new Map((existingPlayers[team] || []).map((name) => [playerNameKey(name), name]))
+  ]));
   const teamGoals = new Map();
   for (const result of results) {
     teamGoals.set(result.home, (teamGoals.get(result.home) || 0) + result.homeScore);
@@ -80,6 +93,7 @@ async function scorerStats(teamMeta, results) {
       if (!team) continue;
       for (const entry of roster.roster || []) {
         const name = entry.athlete?.displayName;
+        addTeamPlayer(teamPlayerNames, team.n, name);
         const goals = stat(entry, "totalGoals");
         const games = stat(entry, "appearances");
         if (!name || (!goals && !games)) continue;
@@ -105,6 +119,10 @@ async function scorerStats(teamMeta, results) {
     teams: Object.fromEntries([...teamMeta.keys()].map((team) => [
       team,
       leaders.filter((player) => player.country === team)
+    ])),
+    players: Object.fromEntries([...teamPlayerNames].map(([team, names]) => [
+      team,
+      [...names.values()].sort((a, b) => a.localeCompare(b))
     ]))
   };
 }
@@ -155,7 +173,9 @@ async function main() {
   }
 
   data.groupResults = results;
-  data.scorers = await scorerStats(teamMeta, results);
+  const stats = await scorerStats(teamMeta, results, data.players || {});
+  data.scorers = { overall: stats.overall, teams: stats.teams };
+  data.players = stats.players;
   data.updated = timestamp();
   writeData(data);
   console.log(`Updated ${results.length} completed World Cup matches.`);
