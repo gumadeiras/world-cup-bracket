@@ -179,9 +179,10 @@ function renderStandings() {
 function renderScorerCards() {
   const scorers = data.scorers || { overall: [], teams: {} };
   const teams = knockoutTeams();
+  const totalGoals = Object.values(scorers.teams || {}).flat().reduce((sum, player) => sum + player.goals, 0);
   scorerCardsEl.innerHTML = `
     <article class="scorer-card scorer-card--overall">
-      <b>overall top 5</b>
+      <b><span>overall top 5</span> <em>${totalGoals} ${totalGoals === 1 ? "goal" : "goals"}</em></b>
       <div class="scorer-row scorer-head"><span>name</span><span>country</span><span>goals</span></div>
       ${(scorers.overall || []).map((player) => {
         const team = teamByCountry(player.country, player.countryCode);
