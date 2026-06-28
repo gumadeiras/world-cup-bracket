@@ -511,8 +511,20 @@
     }
 
     @media (max-width: 720px) {
+      .entry-matches {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .entry-match {
+        max-width: none;
+      }
+
       .entry-final-row {
-        grid-template-columns: 260px;
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .entry-final-row .champion {
+        width: 100%;
       }
     }
 
