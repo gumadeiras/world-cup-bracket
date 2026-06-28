@@ -26,4 +26,10 @@ const wrongPath = structuredClone(picks);
 wrongPath.matches[75] = { home: 1, away: 0 };
 assert.deepEqual(scorePicks(wrongPath, data), { points: 6, exact: 1, result: 0, scorers: 3 });
 
+const nullScores = {
+  boostCountry: "",
+  matches: { 73: { home: null, away: null }, 75: { home: "", away: "" } }
+};
+assert.deepEqual(scorePicks(nullScores, data), { points: 0, exact: 0, result: 0, scorers: 0 });
+
 console.log("scoring check passed");

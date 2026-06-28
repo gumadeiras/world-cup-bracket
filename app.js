@@ -122,6 +122,7 @@ const randomizeLabels = [
 ];
 const standings = data.standings || [];
 const groupResults = data.groupResults || [];
+const matchResults = data.matchResults || {};
 const allPlayers = [...new Set(Object.values(data.players || {}).flat())].sort();
 const standingsEl = document.querySelector("[data-standings]");
 const overallStandingsEl = document.querySelector("[data-overall-standings]");
@@ -270,6 +271,24 @@ function pick(id) {
   return activePicks.matches?.[id] || {};
 }
 
+function confirmedMatch(id, home = "", away = "") {
+  const actual = matchResults[id];
+  if (!actual) return null;
+  if (home && away && actual.home === away && actual.away === home) {
+    return {
+      ...actual,
+      home: actual.away,
+      away: actual.home,
+      homeScore: actual.awayScore,
+      awayScore: actual.homeScore,
+      homeScorers: actual.awayScorers,
+      awayScorers: actual.homeScorers,
+      winnerSide: actual.winnerSide === "home" ? "away" : actual.winnerSide === "away" ? "home" : ""
+    };
+  }
+  return actual;
+}
+
 function thirdPlaceSlots() {
   const key = bestThirdTeams().map((team) => team.group).sort().join("");
   return thirdPlaceOptions[key] || {};
@@ -309,6 +328,8 @@ function affectedMatchIds(id) {
 }
 
 function winner(id) {
+  const actual = confirmedMatch(id);
+  if (actual?.winnerSide) return actual.winnerSide === "home" ? actual.home : actual.away;
   const data = pick(id);
   const [home, away] = teams(id);
   if (data.home === "" || data.away === "" || data.home == null || data.away == null) return "";
@@ -318,6 +339,8 @@ function winner(id) {
 }
 
 function loser(id) {
+  const actual = confirmedMatch(id);
+  if (actual?.winnerSide) return actual.winnerSide === "home" ? actual.away : actual.home;
   const data = pick(id);
   const [home, away] = teams(id);
   const win = winner(id);
@@ -398,6 +421,8 @@ function withPicks(picks, callback) {
 
 function scoreLine(row, id) {
   const score = (row.matchBreakdown || []).find((match) => String(match.id) === String(id));
+  const actual = matchResults[id];
+  if (!score && actual) return `<span class="entry-points closed">closed</span><small>final ${actual.homeScore}-${actual.awayScore} · no points</small>`;
   if (!score) return `<span class="entry-points pending">pending</span><small>not scored yet</small>`;
   const chips = [
     score.exact ? ["exact", "exact"] : score.result ? ["result", "winner"] : ["miss", "score miss"],
@@ -419,11 +444,13 @@ function renderEntryMatch(row, match) {
   const [id, homeRaw, awayRaw] = match;
   const pickData = pick(id);
   const score = (row.matchBreakdown || []).find((item) => String(item.id) === String(id));
+  const closed = matchResults[id] && !score;
   const home = label(resolveThirdSlot(homeRaw, id));
   const away = label(resolveThirdSlot(awayRaw, id));
   const win = winner(id);
   const boosted = row.boostCountry && [slotInfo(home).team?.n, slotInfo(away).team?.n].includes(row.boostCountry);
-  return `<article class="entry-match ${boosted ? "boosted" : ""} ${score?.exact ? "exact" : score?.result ? "result" : ""} ${score?.scorers ? "scorer-hit" : ""}">
+  const missed = score && !score.exact && !score.result;
+  return `<article class="entry-match ${boosted ? "boosted" : ""} ${closed ? "closed" : ""} ${missed ? "missed" : ""} ${score?.exact ? "exact" : score?.result ? "result" : ""} ${score?.scorers ? "scorer-hit" : ""}">
     <div class="entry-match-head"><time>${kickoffs[id]}</time><span>${scoreLine(row, id)}</span></div>
     ${renderEntryTeam(slotInfo(home), pickData.home, pickData.homeScorers, win)}
     ${renderEntryTeam(slotInfo(away), pickData.away, pickData.awayScorers, win)}
@@ -467,7 +494,12 @@ function renderEntryDetail() {
     ${row.picks ? rounds.map((round) => `
       <section class="entry-round">
         <h3>${round.name}<span>${round.date}</span></h3>
-        <div class="entry-matches">${dateOrderedMatches(round).map((match) => renderEntryMatch(row, match)).join("")}</div>
+        ${round.name === "final" ? `
+          <div class="entry-final-row">
+            <div class="entry-matches">${dateOrderedMatches(round).map((match) => renderEntryMatch(row, match)).join("")}</div>
+            ${renderChampion()}
+          </div>
+        ` : `<div class="entry-matches">${dateOrderedMatches(round).map((match) => renderEntryMatch(row, match)).join("")}</div>`}
       </section>
     `).join("") : `<p class="entry-empty">No submitted picks saved for this seeded row.</p>`}
   `);
@@ -514,14 +546,15 @@ function renderSlot(info, showStatus = false) {
 function renderChampion() {
   const champ = winner(104);
   const info = slotInfo(champ || "...");
-  return `<div class="champion"><span class="champion-kicker"><span class="trophy-mask" aria-hidden="true"></span>champion</span><b>${info.team ? `<img class="flag" src="${info.team.l}" alt="">` : ""}${escapeHtml(info.main)}</b></div>`;
+  return `<div class="champion"><span class="champion-kicker"><img class="champion-trophy" src="./assets/trophy-color.svg" alt="" aria-hidden="true">champion</span><b>${info.team ? `<img class="flag" src="${info.team.l}" alt="">` : ""}${escapeHtml(info.main)}</b></div>`;
 }
 
-function renderScorers(matchData, id, side, info) {
+function renderScorers(matchData, id, side, info, locked = false) {
   const count = Math.max(0, Math.min(8, Number(matchData[side]) || 0));
   const saved = Array.isArray(matchData[side + "Scorers"]) ? matchData[side + "Scorers"] : [];
   const players = data.players?.[info.team?.n] || allPlayers;
   if (!count) return `<div class="scorers"></div>`;
+  if (locked) return `<div class="scorers confirmed">${saved.slice(0, count).map((scorer, index) => `<span>${escapeHtml(scorer || `goal ${index + 1}`)}</span>`).join("")}</div>`;
   return `<div class="scorers">${Array.from({ length: count }, (_, index) => `
     <select class="scorer" data-scorer="${id}:${side}:${index}" aria-label="match ${id} ${info.main} goal ${index + 1} scorer">
       <option value="">goal ${index + 1}</option>
@@ -536,9 +569,15 @@ function isBoosted(homeInfo, awayInfo) {
 
 function renderMatch(match, index, stage) {
   const [id, homeRaw, awayRaw] = match;
-  const data = pick(id);
   const home = label(resolveThirdSlot(homeRaw, id));
   const away = label(resolveThirdSlot(awayRaw, id));
+  const actual = confirmedMatch(id, home, away);
+  const data = actual ? {
+    home: actual.homeScore,
+    away: actual.awayScore,
+    homeScorers: actual.homeScorers,
+    awayScorers: actual.awayScorers
+  } : pick(id);
   const win = winner(id);
   const tied = data.home !== "" && data.away !== "" && data.home != null && data.away != null && Number(data.home) === Number(data.away);
   const homeInfo = slotInfo(home);
@@ -546,23 +585,23 @@ function renderMatch(match, index, stage) {
   const boosted = isBoosted(homeInfo, awayInfo);
   const showStatus = stage === "round of 32";
   return `
-        <article class="match ${stage === "final" ? "final" : ""} ${tied ? "tied" : ""} ${boosted ? "boosted" : ""}" data-match-id="${id}" style="animation-delay:${index * 24}ms">
-          <span class="match-id">M${id}</span>${boosted ? `<span class="boost-badge">2x points</span>` : ""}
+        <article class="match ${stage === "final" ? "final" : ""} ${tied ? "tied" : ""} ${boosted ? "boosted" : ""} ${actual ? "locked-result" : ""}" data-match-id="${id}" style="animation-delay:${index * 24}ms">
+          <span class="match-id">M${id}</span>${actual ? `<span class="boost-badge">final</span>` : boosted ? `<span class="boost-badge">2x points</span>` : ""}
           <time class="kickoff">${kickoffs[id]}</time>
           <div class="team ${win === home ? "winner" : ""}">
         ${renderSlot(homeInfo, showStatus)}
-        <input class="score" data-score="${id}:home" type="number" min="0" max="99" inputmode="numeric" value="${data.home ?? ""}" aria-label="match ${id} ${home} score">
-        ${renderScorers(data, id, "home", homeInfo)}
+        <input class="score" data-score="${id}:home" type="number" min="0" max="99" inputmode="numeric" value="${data.home ?? ""}" aria-label="match ${id} ${home} score" ${actual ? "disabled" : ""}>
+        ${renderScorers(data, id, "home", homeInfo, Boolean(actual))}
       </div>
       <div class="team ${win === away ? "winner" : ""}">
         ${renderSlot(awayInfo, showStatus)}
-        <input class="score" data-score="${id}:away" type="number" min="0" max="99" inputmode="numeric" value="${data.away ?? ""}" aria-label="match ${id} ${away} score">
-        ${renderScorers(data, id, "away", awayInfo)}
+        <input class="score" data-score="${id}:away" type="number" min="0" max="99" inputmode="numeric" value="${data.away ?? ""}" aria-label="match ${id} ${away} score" ${actual ? "disabled" : ""}>
+        ${renderScorers(data, id, "away", awayInfo, Boolean(actual))}
       </div>
-      <div class="advance" aria-label="match ${id} penalty winner">
+      ${actual ? "" : `<div class="advance" aria-label="match ${id} penalty winner">
         <button type="button" data-advance="${id}:home" aria-pressed="${data.advance === "home"}">${escapeHtml(homeInfo.main)}</button>
         <button type="button" data-advance="${id}:away" aria-pressed="${data.advance === "away"}">${escapeHtml(awayInfo.main)}</button>
-      </div>
+      </div>`}
     </article>`;
 }
 
@@ -771,12 +810,17 @@ function show(message) {
 
 function submissionPayload() {
   save();
+  const submitted = JSON.parse(JSON.stringify(state));
+  submitted.matches ||= {};
+  Object.keys(matchResults).forEach((id) => {
+    submitted.matches[id] = { home: null, away: null, advance: "", homeScorers: [], awayScorers: [] };
+  });
   return {
     name: state.name || "",
     bracketName: state.bracketName || "",
     email: state.email || "",
     boostCountry: state.boostCountry || "",
-    picks: JSON.stringify(state)
+    picks: JSON.stringify(submitted)
   };
 }
 
@@ -789,8 +833,10 @@ async function copyPicks() {
 }
 
 function hasAnyScore() {
-  return Object.values(state.matches || {}).some((match) =>
-    match.home !== "" && match.home != null || match.away !== "" && match.away != null
+  return Object.entries(state.matches || {}).some(([id, match]) =>
+    !matchResults[id] && (
+      match.home !== "" && match.home != null || match.away !== "" && match.away != null
+    )
   );
 }
 
@@ -891,6 +937,10 @@ function randomizePicks() {
   state.matches = {};
   const boostOptions = [...document.querySelectorAll("[data-boost-country] option")].map((option) => option.value).filter(Boolean);
   rounds.flatMap((round) => orderedMatches(round)).forEach(([id]) => {
+    if (confirmedMatch(id)) {
+      state.matches[id] = { home: null, away: null, advance: "", homeScorers: [], awayScorers: [] };
+      return;
+    }
     const [home, away] = teams(id);
     const homeInfo = slotInfo(home);
     const awayInfo = slotInfo(away);

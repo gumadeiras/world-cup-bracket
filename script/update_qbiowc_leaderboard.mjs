@@ -91,12 +91,16 @@ function blankScore() {
 }
 
 function matchWinnerSide(match) {
+  if (!hasScore(match.home) || !hasScore(match.away)) return "";
   const home = Number(match.home);
   const away = Number(match.away);
-  if (!Number.isFinite(home) || !Number.isFinite(away)) return "";
   if (home > away) return "home";
   if (away > home) return "away";
   return match.advance || "";
+}
+
+function hasScore(value) {
+  return value !== "" && value != null && Number.isFinite(Number(value));
 }
 
 function countScorers(predicted = [], actual = []) {
@@ -197,6 +201,7 @@ export function scorePicksDetailed(picks, data) {
     const predicted = predictedTeams(id);
     const pick = picks.matches?.[id];
     if (!actual || !predicted || !pick || predicted.home !== actual.home || predicted.away !== actual.away) continue;
+    if (!hasScore(pick.home) || !hasScore(pick.away)) continue;
 
     const exact = Number(pick.home) === actual.homeScore && Number(pick.away) === actual.awayScore;
     const result = !exact && matchWinnerSide(pick) === actual.winnerSide;
