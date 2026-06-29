@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
-import { scorePicks } from "./update_qbiowc_leaderboard.mjs";
+import { mergeCompletedPicks, scorePicks } from "./update_qbiowc_leaderboard.mjs";
 
 const data = {
   matchResults: {
@@ -31,5 +31,14 @@ const nullScores = {
   matches: { 73: { home: null, away: null }, 75: { home: "", away: "" } }
 };
 assert.deepEqual(scorePicks(nullScores, data), { points: 0, exact: 0, result: 0, scorers: 0 });
+
+assert.deepEqual(
+  mergeCompletedPicks(
+    { matches: { 73: { home: 2, away: 1 }, 74: { home: 1, away: 0 } } },
+    { matches: { 73: { home: null, away: null }, 74: { home: 2, away: 0 } } },
+    new Set(["73"])
+  ).matches,
+  { 73: { home: 2, away: 1 }, 74: { home: 2, away: 0 } }
+);
 
 console.log("scoring check passed");

@@ -237,6 +237,23 @@ function parsePicks(row) {
   }
 }
 
+function hasCompleteScore(match) {
+  return match && hasScore(match.home) && hasScore(match.away);
+}
+
+export function mergeCompletedPicks(previous, latest, completedIds) {
+  const merged = {
+    ...latest,
+    matches: { ...(latest.matches || {}) }
+  };
+  for (const id of completedIds) {
+    if (hasCompleteScore(previous.matches?.[id]) && !hasCompleteScore(latest.matches?.[id])) {
+      merged.matches[id] = previous.matches[id];
+    }
+  }
+  return merged;
+}
+
 function sanitizePicks(picks) {
   return {
     boostCountry: picks.boostCountry || "",
@@ -263,20 +280,21 @@ async function main() {
   const [headers, ...rows] = parseCsv(await response.text());
   const allRows = rows.map((entry) => rowObject(headers, entry));
   const formBracketNames = new Set(allRows.map((row) => row["bracket name"]).filter(Boolean));
+  const data = readData();
+  const completedIds = new Set(Object.keys(data.matchResults || {}));
   const latestByEmail = new Map();
 
-  for (const row of allRows) {
+  for (const row of allRows.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))) {
     const email = row.email.trim().toLowerCase();
     if (!email || ignoredEmails.has(email)) continue;
     if (removedBracketNames.has(row["bracket name"])) continue;
 
     const previous = latestByEmail.get(email);
-    if (!previous || new Date(row.timestamp) >= new Date(previous.timestamp)) {
-      latestByEmail.set(email, row);
-    }
+    const picks = parsePicks(row);
+    const merged = previous ? mergeCompletedPicks(parsePicks(previous), picks, completedIds) : picks;
+    latestByEmail.set(email, { ...row, picks: JSON.stringify(merged) });
   }
 
-  const data = readData();
   const existingSeeded = (data.leaderboard || [])
     .filter((row) => !removedBracketNames.has(row.bracketName))
     .filter((row) => !formBracketNames.has(row.bracketName))
