@@ -172,7 +172,7 @@ async function main() {
 
   for (const event of (scoreboard.events || []).sort((a, b) => new Date(a.date) - new Date(b.date))) {
     const competition = event.competitions?.[0];
-    if (competition?.status?.type?.description !== "Full Time") continue;
+    if (!competition?.status?.type?.completed) continue;
     const competitors = competition.competitors || [];
     if (competitors.length !== 2) continue;
     const [first, second] = competitors;
