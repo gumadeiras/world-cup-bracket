@@ -982,8 +982,8 @@ function renderStatCrimesPanel(target, updatedEl, { completed, includeBracket, m
   ].filter(Boolean);
   const bracketCards = [
     favoriteScore ? statCrimeCard("lab favorite scoreline", favoriteScore[0], `${formatCount(favoriteScore[1], "bracket")} chose the house special.`, "", statRules.scoreline) : "",
-    includeBracket && coward?.count ? statCrimeCard("coward index", coward.row.bracketName, `${formatCount(coward.count, "low-score pick")}. defensive biology.`, "gold", statRules.coward) : "",
-    includeBracket && sicko?.count ? statCrimeCard("sicko index", sicko.row.bracketName, `${formatCount(sicko.count, "draw")} predicted. seek help or tenure.`, "gold", statRules.sicko) : "",
+    includeBracket && coward?.count ? statCrimeCard("fear of variance", coward.row.bracketName, `${formatCount(coward.count, "low-score pick")}. defensive biology.`, "gold", statRules.coward) : "",
+    includeBracket && sicko?.count ? statCrimeCard("nash equilibrium", sicko.row.bracketName, `${formatCount(sicko.count, "draw")} predicted. seek help or tenure.`, "gold", statRules.sicko) : "",
     includeBracket && boost ? statCrimeCard("boost unemployment office", boost.country, `${formatCount(boost.believers, "believer")}. ${boost.points} boost pts`, boost.points ? "" : "danger", statRules.boost) : "",
     includeBracket && scorerFraud ? statCrimeCard("pichichi fraud detector", scorerFraud.row.bracketName, `${scorerFraud.attempts} scorer picks. ${scorerFraud.hits} hits. ambition is not accuracy.`, "danger", statRules.pichichi) : "",
     includeBracket && deterministic ? statCrimeCard("deterministic biology award", deterministic.row.bracketName, `${deterministic.exact || 0} exact scores. ${deterministic.points || 0} pts.`, "", statRules.deterministic) : "",
