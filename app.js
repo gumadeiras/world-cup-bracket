@@ -131,6 +131,8 @@ const scorerCardsEl = document.querySelector("[data-scorer-cards]");
 const standingsUpdatedEl = document.querySelector("[data-standings-updated]");
 const leaderboardEl = document.querySelector("[data-leaderboard]");
 const leaderboardUpdatedEl = document.querySelector("[data-leaderboard-updated]");
+const statCrimesEl = document.querySelector("[data-stat-crimes]");
+const statCrimesUpdatedEl = document.querySelector("[data-stat-crimes-updated]");
 const entryDetailEl = document.querySelector("[data-entry-detail]");
 const todayMatchesEl = document.querySelector("[data-today-matches]");
 const nextMatchesEl = document.querySelector("[data-next-matches]");
@@ -425,9 +427,7 @@ function renderLeaderboard() {
   if (leaderboardUpdatedEl) {
     leaderboardUpdatedEl.textContent = `last updated ${data.leaderboardUpdated || data.updated || "TBD"}`;
   }
-  const rows = [...(data.leaderboard || [])].sort((a, b) =>
-    b.points - a.points || b.exact - a.exact || b.scorers - a.scorers || a.bracketName.localeCompare(b.bracketName)
-  );
+  const rows = sortedLeaderboard();
   leaderboardEl.innerHTML = rows.length ? rows.map((row, index) => `
     <div class="leader-row">
       <span>${index + 1}</span><span><a class="leader-link" href="?entry=${escapeAttribute(entryId(row, index))}">${escapeHtml(row.bracketName)}</a></span><span class="leader-boost">${renderBoostCountry(row.boostCountry)}</span><span>${row.points}</span><span>${row.exact}</span><span>${row.result}</span><span>${row.scorers}</span>
@@ -435,6 +435,12 @@ function renderLeaderboard() {
     <div class="leader-row">
       <span>-</span><span>TBD</span><span>-</span><span>0</span><span>0</span><span>0</span><span>0</span>
     </div>`;
+}
+
+function sortedLeaderboard() {
+  return [...(data.leaderboard || [])].sort((a, b) =>
+    b.points - a.points || b.exact - a.exact || b.scorers - a.scorers || a.bracketName.localeCompare(b.bracketName)
+  );
 }
 
 function slug(value) {
@@ -677,6 +683,203 @@ function pickWinnerSide(match) {
   if (+match.home > +match.away) return "home";
   if (+match.away > +match.home) return "away";
   return match.advance === "home" || match.advance === "away" ? match.advance : "";
+}
+
+function formatCount(count, singular, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function scoreText(match) {
+  return match?.home == null || match?.away == null || match.home === "" || match.away === "" ? "" : `${Number(match.home)}-${Number(match.away)}`;
+}
+
+function scoreTotal(match) {
+  return scoreText(match).split("-").reduce((sum, value) => sum + Number(value || 0), 0);
+}
+
+function statWinnerName(result) {
+  return result.winnerSide === "home" ? result.home : result.winnerSide === "away" ? result.away : "";
+}
+
+function statLoserName(result) {
+  return result.winnerSide === "home" ? result.away : result.winnerSide === "away" ? result.home : "";
+}
+
+function statLine(result) {
+  return `${result.home} ${result.homeScore}-${result.awayScore} ${result.away}`;
+}
+
+function resultOutcome(result) {
+  const winner = statWinnerName(result);
+  if (!winner) return statLine(result);
+  return result.homeScore === result.awayScore ? `${winner} advanced after ${result.homeScore}-${result.awayScore}` : `${winner} won ${result.homeScore}-${result.awayScore}`;
+}
+
+function resultStats(id, result) {
+  return {
+    ...(data.matchStats?.[id] || {}),
+    id,
+    result
+  };
+}
+
+function teamStat(entry, team, stat) {
+  return Number(entry.stats?.[team]?.[stat] || 0);
+}
+
+function statCrimeCard(title, value, detail = "", tone = "") {
+  if (!value) return "";
+  return `<article class="stat-card ${tone}">
+    <b>${escapeHtml(title)}</b>
+    <strong>${escapeHtml(value)}</strong>
+    ${detail ? `<span>${escapeHtml(detail)}</span>` : ""}
+  </article>`;
+}
+
+function statPickWinner(row, id) {
+  let picked = "";
+  withPicks(row.picks || { matches: {} }, () => {
+    const side = pickWinnerSide(pick(id));
+    const matchTeams = teams(id);
+    picked = slotInfo(side === "home" ? matchTeams[0] : side === "away" ? matchTeams[1] : "").team?.n || "";
+  });
+  return picked;
+}
+
+function completedStatMatches() {
+  return Object.entries(matchResults).map(([id, result]) => resultStats(id, result));
+}
+
+function scorelineCounts() {
+  const counts = new Map();
+  for (const row of data.leaderboard || []) {
+    for (const match of Object.values(row.picks?.matches || {})) {
+      const text = scoreText(match);
+      if (text) counts.set(text, (counts.get(text) || 0) + 1);
+    }
+  }
+  return [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
+function boostPointRows() {
+  const rows = data.leaderboard || [];
+  const countries = new Map();
+  for (const row of rows) {
+    const country = row.boostCountry || "none";
+    const entry = countries.get(country) || { country, believers: 0, points: 0 };
+    entry.believers++;
+    entry.points += (row.matchBreakdown || []).reduce((sum, match) => sum + (match.multiplier === 2 ? match.points / 2 : 0), 0);
+    countries.set(country, entry);
+  }
+  return [...countries.values()].sort((a, b) => b.believers - a.believers || a.points - b.points || a.country.localeCompare(b.country));
+}
+
+function renderStatCrimes() {
+  if (!statCrimesEl) return;
+  if (statCrimesUpdatedEl) statCrimesUpdatedEl.textContent = `last updated ${data.updated || "TBD"}`;
+  const rows = data.leaderboard || [];
+  const completed = completedStatMatches();
+
+  const cooked = completed.map((entry) => {
+    const actual = statWinnerName(entry.result);
+    const counts = new Map();
+    for (const row of rows) {
+      const picked = statPickWinner(row, entry.id);
+      if (picked) counts.set(picked, (counts.get(picked) || 0) + 1);
+    }
+    const [pickName, picks = 0] = [...counts].sort((a, b) => b[1] - a[1])[0] || [];
+    return { ...entry, actual, pickName, picks, wrong: pickName && pickName !== actual ? picks : 0 };
+  }).sort((a, b) => b.wrong - a.wrong)[0];
+
+  const lowScores = new Set(["0-0", "1-0", "0-1", "1-1", "2-0", "0-2"]);
+  const coward = [...rows].map((row) => ({
+    row,
+    count: Object.values(row.picks?.matches || {}).filter((match) => lowScores.has(scoreText(match))).length
+  })).sort((a, b) => b.count - a.count || a.row.bracketName.localeCompare(b.row.bracketName))[0];
+
+  const sicko = [...rows].map((row) => ({
+    row,
+    count: Object.values(row.picks?.matches || {}).filter((match) => {
+      const text = scoreText(match);
+      return text && text.split("-")[0] === text.split("-")[1];
+    }).length
+  })).sort((a, b) => b.count - a.count || a.row.bracketName.localeCompare(b.row.bracketName))[0];
+
+  const boost = boostPointRows().find((entry) => entry.points === 0) || boostPointRows().slice().sort((a, b) => a.points - b.points || b.believers - a.believers)[0];
+
+  const possessionFraud = completed.map((entry) => {
+    const loser = statLoserName(entry.result);
+    const winner = statWinnerName(entry.result);
+    return { ...entry, loser, winner, possession: teamStat(entry, loser, "possession") - teamStat(entry, winner, "possession") };
+  }).filter((entry) => entry.loser && entry.possession > 0).sort((a, b) => b.possession - a.possession)[0];
+
+  const shotFraud = completed.map((entry) => {
+    const loser = statLoserName(entry.result);
+    const winner = statWinnerName(entry.result);
+    return { ...entry, loser, winner, shots: teamStat(entry, loser, "shots") - teamStat(entry, winner, "shots") };
+  }).filter((entry) => entry.loser && entry.shots > 0).sort((a, b) => b.shots - a.shots)[0];
+
+  const modelMismatch = completed.map((entry) => {
+    const odds = entry.favoriteSide === "home" ? entry.result.home : entry.favoriteSide === "away" ? entry.result.away : "";
+    const counts = new Map();
+    for (const row of rows) {
+      const picked = statPickWinner(row, entry.id);
+      if (picked) counts.set(picked, (counts.get(picked) || 0) + 1);
+    }
+    const [qbio = "", qbioVotes = 0] = [...counts].sort((a, b) => b[1] - a[1])[0] || [];
+    return { ...entry, odds, qbio, qbioVotes, mismatch: odds && qbio && odds !== qbio };
+  }).filter((entry) => entry.mismatch).sort((a, b) => b.qbioVotes - a.qbioVotes || a.id.localeCompare(b.id))[0];
+
+  const mainCharacter = completed.flatMap((entry) => [entry.result.home, entry.result.away].map((team) => ({
+    entry,
+    team,
+    fouls: teamStat(entry, team, "fouls"),
+    cards: teamStat(entry, team, "yellowCards") + teamStat(entry, team, "redCards")
+  }))).sort((a, b) => b.cards - a.cards || b.fouls - a.fouls || a.team.localeCompare(b.team))[0];
+
+  const crossMerchant = completed.flatMap((entry) => [entry.result.home, entry.result.away].map((team) => ({
+    entry,
+    team,
+    crosses: teamStat(entry, team, "crosses"),
+    won: statWinnerName(entry.result) === team
+  }))).sort((a, b) => Number(a.won) - Number(b.won) || b.crosses - a.crosses || a.team.localeCompare(b.team))[0];
+
+  const favoriteScore = scorelineCounts()[0];
+  const scorerFraud = [...rows].map((row) => {
+    const attempts = Object.values(row.picks?.matches || {}).reduce((sum, match) =>
+      sum + (match.homeScorers || []).filter(Boolean).length + (match.awayScorers || []).filter(Boolean).length, 0);
+    return { row, attempts, hits: row.scorers || 0 };
+  }).filter((entry) => entry.attempts && (entry.row.points || 0) >= 3).sort((a, b) => b.attempts - a.attempts || a.hits - b.hits || a.row.bracketName.localeCompare(b.row.bracketName))[0];
+
+  const deterministic = [...rows].sort((a, b) =>
+    (b.exact || 0) - (a.exact || 0) || (b.points || 0) - (a.points || 0) || a.bracketName.localeCompare(b.bracketName)
+  )[0];
+
+  const parked = [...rows].map((row) => ({
+    row,
+    points: (row.matchBreakdown || []).reduce((sum, score) => {
+      const match = row.picks?.matches?.[score.id];
+      return sum + (score.points > 0 && scoreTotal(match) <= 2 ? score.points : 0);
+    }, 0)
+  })).sort((a, b) => b.points - a.points || a.row.bracketName.localeCompare(b.row.bracketName))[0];
+
+  statCrimesEl.innerHTML = [
+    cooked?.wrong ? statCrimeCard("QBio got cooked", `${cooked.picks} picked ${cooked.pickName}`, `${resultOutcome(cooked.result)}. receipts archived.`, "danger") : "",
+    coward?.count ? statCrimeCard("coward index", coward.row.bracketName, `${formatCount(coward.count, "low-score pick")}. defensive biology.`, "gold") : "",
+    sicko?.count ? statCrimeCard("sicko index", sicko.row.bracketName, `${formatCount(sicko.count, "draw")} predicted. seek help or tenure.`, "gold") : "",
+    boost ? statCrimeCard("boost unemployment office", boost.country, `${formatCount(boost.believers, "believer")}. ${boost.points} boost pts`, boost.points ? "" : "danger") : "",
+    possessionFraud ? statCrimeCard("possession is a social construct", possessionFraud.loser, `+${Math.round(possessionFraud.possession)}% possession and still out.`, "danger") : "",
+    shotFraud ? statCrimeCard("shots are just vibes", shotFraud.loser, `+${shotFraud.shots} shots and nothing to show for it.`, "danger") : "",
+    modelMismatch
+      ? statCrimeCard("model mismatch", `${modelMismatch.qbio} vs ${modelMismatch.odds}`, `QBio had ${modelMismatch.qbioVotes} votes. ESPN odds disagreed.`, "danger")
+      : statCrimeCard("model mismatch", "no split yet", "QBio and ESPN odds copied each other's homework.", "gold"),
+    mainCharacter ? statCrimeCard("main character energy", mainCharacter.team, `${mainCharacter.cards} cards. ${mainCharacter.fouls} fouls. very subtle.`, "gold") : "",
+    crossMerchant ? statCrimeCard("cross merchant award", crossMerchant.team, `${formatCount(crossMerchant.crosses, "cross", "crosses")} ${crossMerchant.won ? "and survived." : "and still lost."}`, "gold") : "",
+    favoriteScore ? statCrimeCard("lab favorite scoreline", favoriteScore[0], `${formatCount(favoriteScore[1], "bracket")} chose the house special.`) : "",
+    scorerFraud ? statCrimeCard("pichichi fraud detector", scorerFraud.row.bracketName, `${scorerFraud.attempts} scorer picks. ${scorerFraud.hits} hits. ambition is not accuracy.`, "danger") : "",
+    deterministic ? statCrimeCard("deterministic biology award", deterministic.bracketName, `${deterministic.exact || 0} exact scores. ${deterministic.points || 0} pts.`) : "",
+    parked?.points ? statCrimeCard("park the bus memorial trophy", parked.row.bracketName, `${formatCount(parked.points, "ugly point")}. methods ugly, results significant.`, "gold") : ""
+  ].filter(Boolean).join("");
 }
 
 function crowdPicks(id) {
@@ -1283,6 +1486,7 @@ document.querySelector("[data-reset]").addEventListener("click", () => {
 if (!renderEntryDetail()) {
   renderStandings();
   renderLeaderboard();
+  renderStatCrimes();
   render();
   enhanceDetails();
   window.addEventListener("resize", () => {
