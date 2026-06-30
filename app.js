@@ -488,6 +488,19 @@ function dateOrderedMatches(round) {
   return [...round.matches].sort((a, b) => kickoffStamp(a[0]) - kickoffStamp(b[0]) || a[0] - b[0]);
 }
 
+async function copyEntryBracket(row) {
+  const picks = sanitizePicks(JSON.parse(JSON.stringify(row.picks || { matches: {} })));
+  const payload = {
+    name: "",
+    bracketName: row.bracketName || "",
+    email: "",
+    boostCountry: picks.boostCountry || row.boostCountry || "",
+    matches: picks.matches || {}
+  };
+  await copyText(JSON.stringify(payload, null, 2), "copy bracket");
+  show("bracket copied; paste into restore");
+}
+
 function renderEntryDetail() {
   const wanted = new URLSearchParams(location.search).get("entry");
   if (!wanted) return false;
@@ -507,6 +520,10 @@ function renderEntryDetail() {
       <div><p>bracket detail</p><h2>${escapeHtml(row.bracketName)}</h2></div>
       <div class="entry-total"><b>${row.points || 0}</b><span>pts</span></div>
     </header>
+    <div class="entry-actions">
+      <button class="secondary" type="button" data-entry-copy>copy bracket</button>
+      <span>paste into restore to update your bracket. submit with the same email so it replaces your first one.</span>
+    </div>
     <div class="entry-stats">
       <span>boost <em class="entry-boost">${renderBoostCountry(row.boostCountry)}</em></span>
       <span>${row.exact || 0} exact</span>
@@ -525,6 +542,7 @@ function renderEntryDetail() {
       </section>
     `).join("") : `<p class="entry-empty">No submitted picks saved for this seeded row.</p>`}
   `);
+  entryDetailEl.querySelector("[data-entry-copy]")?.addEventListener("click", () => copyEntryBracket(row));
   return true;
 }
 
@@ -852,7 +870,15 @@ function googleFormReady() {
 
 async function copyPicks() {
   save();
-  await navigator.clipboard.writeText(JSON.stringify(sanitizePicks(JSON.parse(JSON.stringify(state))), null, 2));
+  await copyText(JSON.stringify(sanitizePicks(JSON.parse(JSON.stringify(state))), null, 2), "copy picks");
+}
+
+async function copyText(text, label) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    window.prompt(label, text);
+  }
 }
 
 function hasAnyScore() {
@@ -1044,12 +1070,8 @@ ${JSON.stringify(restoreTemplate(), null, 2)}`;
 
 async function copyAgentPrompt() {
   const promptText = buildAgentPrompt();
-  try {
-    await navigator.clipboard.writeText(promptText);
-    show("agent prompt copied");
-  } catch {
-    window.prompt("copy agent prompt", promptText);
-  }
+  await copyText(promptText, "copy agent prompt");
+  show("agent prompt copied");
 }
 
 function renderBoostCountries() {
