@@ -435,9 +435,10 @@ function renderLeaderboard() {
     leaderboardUpdatedEl.textContent = `updated ${displayTimestamp(data.leaderboardUpdated || data.updated)}`;
   }
   const rows = sortedLeaderboard();
+  const movement = leaderboardMovement(rows);
   leaderboardEl.innerHTML = rows.length ? rows.map((row, index) => `
     <div class="leader-row">
-      <span>${index + 1}</span><span><a class="leader-link" href="?entry=${escapeAttribute(entryId(row, index))}">${escapeHtml(row.bracketName)}</a></span><span class="leader-boost">${renderBoostCountry(row.boostCountry)}</span><span>${row.points}</span><span>${row.exact}</span><span>${row.result}</span><span>${row.scorers}</span>
+      <span>${index + 1}</span><span class="leader-name">${renderRankChange(row, index, movement)}<a class="leader-link" href="?entry=${escapeAttribute(entryId(row, index))}">${escapeHtml(row.bracketName)}</a></span><span class="leader-boost">${renderBoostCountry(row.boostCountry)}</span><span>${row.points}</span><span>${row.exact}</span><span>${row.result}</span><span>${row.scorers}</span>
     </div>`).join("") : `
     <div class="leader-row">
       <span>-</span><span>TBD</span><span>-</span><span>0</span><span>0</span><span>0</span><span>0</span>
@@ -445,9 +446,57 @@ function renderLeaderboard() {
 }
 
 function sortedLeaderboard() {
-  return [...(data.leaderboard || [])].sort((a, b) =>
-    b.points - a.points || b.exact - a.exact || b.scorers - a.scorers || a.bracketName.localeCompare(b.bracketName)
-  );
+  return [...(data.leaderboard || [])].sort(compareLeaderboardRows);
+}
+
+function compareLeaderboardRows(a, b) {
+  return b.points - a.points || b.exact - a.exact || b.scorers - a.scorers || a.bracketName.localeCompare(b.bracketName);
+}
+
+function latestGameDayMatchIds() {
+  const dated = Object.entries(matchResults)
+    .filter(([, result]) => result?.date)
+    .map(([id, result]) => [id, etSoccerDateKey(new Date(result.date).getTime())]);
+  const days = dated.map(([, day]) => day).sort();
+  const latest = days[days.length - 1];
+  return new Set(dated.filter(([, day]) => day === latest).map(([id]) => String(id)));
+}
+
+function leaderboardScoreBefore(row, excludedIds) {
+  const scores = { points: 0, exact: 0, result: 0, scorers: 0 };
+  for (const match of row.matchBreakdown || []) {
+    if (excludedIds.has(String(match.id))) continue;
+    scores.points += match.points || 0;
+    scores.exact += match.exact || 0;
+    scores.result += match.result || 0;
+    scores.scorers += match.scorers || 0;
+  }
+  return { ...row, ...scores };
+}
+
+function leaderboardMovement(rows) {
+  const latestIds = latestGameDayMatchIds();
+  if (!latestIds.size) return new Map();
+  const beforeRanks = new Map(rows
+    .map((row) => leaderboardScoreBefore(row, latestIds))
+    .sort(compareLeaderboardRows)
+    .map((row, index) => [leaderboardRowKey(row), index + 1]));
+  return new Map(rows.map((row, index) => {
+    const id = leaderboardRowKey(row);
+    return [id, (beforeRanks.get(id) || index + 1) - (index + 1)];
+  }));
+}
+
+function renderRankChange(row, index, movement) {
+  const delta = movement.get(leaderboardRowKey(row)) || 0;
+  const direction = delta > 0 ? "up" : delta < 0 ? "down" : "same";
+  const icon = delta > 0 ? "▲" : delta < 0 ? "▼" : "■";
+  const label = delta > 0 ? `up ${delta}` : delta < 0 ? `down ${Math.abs(delta)}` : "no rank change";
+  return `<span class="rank-change ${direction}" title="${escapeAttribute(label)}" aria-label="${escapeAttribute(label)}"><i>${icon}</i><span>${Math.abs(delta)}</span></span>`;
+}
+
+function leaderboardRowKey(row) {
+  return row.id || slug(row.bracketName || "");
 }
 
 function slug(value) {
@@ -746,6 +795,10 @@ function teamStat(entry, team, stat) {
   return Number(entry.stats?.[team]?.[stat] || 0);
 }
 
+function hasMatchStats(entry) {
+  return Boolean(entry.stats?.[entry.result.home] && entry.stats?.[entry.result.away]);
+}
+
 function statCrimeCard(title, value, detail = "", tone = "", rule = "") {
   if (!value) return "";
   return `<article class="stat-card ${tone}">
@@ -871,6 +924,7 @@ function renderStatCrimesPanel(target, updatedEl, { completed, includeBracket, m
   if (updatedEl) updatedEl.textContent = `updated ${displayTimestamp(data.updated)}`;
   const rows = data.leaderboard || [];
   const completedIds = new Set(completed.map((entry) => String(entry.id)));
+  const statCompleted = completed.filter(hasMatchStats);
 
   const cooked = completed.map((entry) => {
     const actual = statWinnerName(entry.result);
@@ -902,13 +956,13 @@ function renderStatCrimesPanel(target, updatedEl, { completed, includeBracket, m
   const boostRows = boostPointRows(completed);
   const boost = boostRows.find((entry) => entry.points === 0) || boostRows.slice().sort((a, b) => a.points - b.points || b.believers - a.believers)[0];
 
-  const possessionFraud = completed.map((entry) => {
+  const possessionFraud = statCompleted.map((entry) => {
     const loser = statLoserName(entry.result);
     const winner = statWinnerName(entry.result);
     return { ...entry, loser, winner, possession: teamStat(entry, loser, "possession") - teamStat(entry, winner, "possession") };
   }).filter((entry) => entry.loser && entry.possession > 0).sort((a, b) => b.possession - a.possession)[0];
 
-  const shotFraud = completed.map((entry) => {
+  const shotFraud = statCompleted.map((entry) => {
     const loser = statLoserName(entry.result);
     const winner = statWinnerName(entry.result);
     return { ...entry, loser, winner, shots: teamStat(entry, loser, "shots") - teamStat(entry, winner, "shots") };
@@ -925,7 +979,7 @@ function renderStatCrimesPanel(target, updatedEl, { completed, includeBracket, m
     return { ...entry, odds, qbio, qbioVotes, mismatch: odds && qbio && odds !== qbio };
   }).filter((entry) => entry.mismatch).sort((a, b) => b.qbioVotes - a.qbioVotes || a.id.localeCompare(b.id))[0];
 
-  const mainCharacter = completed.flatMap((entry) => [entry.result.home, entry.result.away].map((team) => ({
+  const mainCharacter = statCompleted.flatMap((entry) => [entry.result.home, entry.result.away].map((team) => ({
     entry,
     team,
     yellow: teamStat(entry, team, "yellowCards"),
@@ -934,7 +988,7 @@ function renderStatCrimesPanel(target, updatedEl, { completed, includeBracket, m
     score: teamStat(entry, team, "yellowCards") + teamStat(entry, team, "redCards") * 3
   }))).sort((a, b) => b.score - a.score || b.yellow - a.yellow || b.fouls - a.fouls || a.team.localeCompare(b.team))[0];
 
-  const crossMerchant = completed.flatMap((entry) => [entry.result.home, entry.result.away].map((team) => ({
+  const crossMerchant = statCompleted.flatMap((entry) => [entry.result.home, entry.result.away].map((team) => ({
     entry,
     team,
     crosses: teamStat(entry, team, "crosses"),

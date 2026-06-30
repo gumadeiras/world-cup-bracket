@@ -377,6 +377,38 @@
       align-items: center;
     }
 
+    .leader-name {
+      display: inline-flex;
+      min-width: 0;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .rank-change {
+      display: inline-flex;
+      flex: 0 0 auto;
+      min-width: 34px;
+      gap: 4px;
+      align-items: center;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .rank-change i {
+      font-style: normal;
+      font-size: 0.75rem;
+      line-height: 1;
+    }
+
+    .rank-change.up {
+      color: var(--green);
+    }
+
+    .rank-change.down {
+      color: var(--red);
+    }
+
     .leader-link,
     .back-link {
       color: var(--ink);
