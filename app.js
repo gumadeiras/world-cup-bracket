@@ -140,6 +140,7 @@ const todayMatchesEl = document.querySelector("[data-today-matches]");
 const nextMatchesEl = document.querySelector("[data-next-matches]");
 const tickerTrack = document.querySelector("[data-ticker-track]");
 const board = document.querySelector("[data-board]");
+const slotLegendEl = document.querySelector(".slot-legend");
 const toast = document.querySelector("[data-toast]");
 
 function thirdPlaceKey(team) {
@@ -671,6 +672,12 @@ function slotInfo(value) {
   return { main: value, sub: "predicted", status };
 }
 
+function hasProjectedRoundOf32Slot() {
+  return rounds[0].matches
+    .flatMap(([id, home, away]) => [resolveThirdSlot(home, id), resolveThirdSlot(away, id)])
+    .some((slot) => slotStatus(slot) === "projected");
+}
+
 function renderSlot(info, showSub = true, showStatus = false) {
   return `<span class="slot ${showStatus ? info.status || "pending" : ""}">${info.team ? `<img class="flag" src="${info.team.l}" alt="">` : ""}<strong>${escapeHtml(info.main)}</strong>${showSub ? `<small>${escapeHtml(info.sub)}${showStatus ? ` <em>${escapeHtml(info.status || "pending")}</em>` : ""}</small>` : ""}</span>`;
 }
@@ -1149,17 +1156,18 @@ function renderMatch(match, index, stage) {
   const awayInfo = slotInfo(away);
   const boosted = isBoosted(homeInfo, awayInfo);
   const showSub = stage === "round of 32";
+  const showStatus = showSub && hasProjectedRoundOf32Slot();
   return `
         <article class="match ${stage === "final" ? "final" : ""} ${tied ? "tied" : ""} ${boosted ? "boosted" : ""} ${actual ? "locked-result" : ""} ${live ? "live-result" : ""}" data-match-id="${id}" style="animation-delay:${index * 24}ms">
           <span class="match-id">M${id}</span>${actual ? `<span class="boost-badge">final score</span>` : live ? `<span class="boost-badge live-badge">live ${escapeHtml(live.status || "")}</span>` : boosted ? `<span class="boost-badge">2x points</span>` : ""}
           <time class="kickoff">${kickoffs[id]}</time>
           <div class="team ${win === homeInfo.main ? "winner" : ""}">
-        ${renderSlot(homeInfo, showSub, showSub)}
+        ${renderSlot(homeInfo, showSub, showStatus)}
         ${renderScoreBox(id, "home", homeInfo.main, data.home, locked)}
         ${live ? "" : renderScorers(data, id, "home", homeInfo, Boolean(actual))}
       </div>
       <div class="team ${win === awayInfo.main ? "winner" : ""}">
-        ${renderSlot(awayInfo, showSub, showSub)}
+        ${renderSlot(awayInfo, showSub, showStatus)}
         ${renderScoreBox(id, "away", awayInfo.main, data.away, locked)}
         ${live ? "" : renderScorers(data, id, "away", awayInfo, Boolean(actual))}
       </div>
@@ -1356,6 +1364,7 @@ function updateScrollHint() {
 
 function render() {
   renderMatchFeed();
+  if (slotLegendEl) slotLegendEl.hidden = !hasProjectedRoundOf32Slot();
   board.innerHTML = rounds.map((round) => `
     <section class="round">
       <h2>${round.name}<span class="date">${round.date}</span></h2>
