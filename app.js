@@ -698,10 +698,9 @@ function renderCrowdPicks(id) {
   const crowd = crowdPicks(id);
   if (!crowd) return "";
   return `<div class="crowd-picks">
-    <span>QBio picks</span>
+    <span>QBio picks <small>(${crowd.scoreTotal} bracket${crowd.scoreTotal === 1 ? "" : "s"})</small></span>
     ${crowd.topTeams.map(({ team, pct }) => `<b>${pct}% ${escapeHtml(team)}</b>`).join("")}
     ${crowd.topScore ? `<em>top score ${escapeHtml(crowd.topScore)}</em>` : ""}
-    <small>${crowd.scoreTotal} bracket${crowd.scoreTotal === 1 ? "" : "s"}</small>
   </div>`;
 }
 
