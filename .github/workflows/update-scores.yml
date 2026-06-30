@@ -2,7 +2,7 @@ name: update scores
 
 on:
   schedule:
-    - cron: "0 0-4,16-23 * * *"
+    - cron: "0,30 0-4,16-23 * * *"
   workflow_dispatch:
 
 permissions:

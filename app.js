@@ -735,7 +735,7 @@ function renderMatch(match, index, stage) {
   const showSub = stage === "round of 32";
   return `
         <article class="match ${stage === "final" ? "final" : ""} ${tied ? "tied" : ""} ${boosted ? "boosted" : ""} ${actual ? "locked-result" : ""} ${live ? "live-result" : ""}" data-match-id="${id}" style="animation-delay:${index * 24}ms">
-          <span class="match-id">M${id}</span>${actual ? `<span class="boost-badge">final score</span>` : live ? `<span class="boost-badge live-badge">live</span>` : boosted ? `<span class="boost-badge">2x points</span>` : ""}
+          <span class="match-id">M${id}</span>${actual ? `<span class="boost-badge">final score</span>` : live ? `<span class="boost-badge live-badge">live ${escapeHtml(live.status || "")}</span>` : boosted ? `<span class="boost-badge">2x points</span>` : ""}
           <time class="kickoff">${kickoffs[id]}</time>
           <div class="team ${win === homeInfo.main ? "winner" : ""}">
         ${renderSlot(homeInfo, showSub, showSub)}
