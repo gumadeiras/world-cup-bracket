@@ -896,7 +896,7 @@ function groupStageCrimeCards() {
   return [
     byWins.length ? statCrimeCard("perfect record police", tiedNames(byWins, (team) => team.w), "3 wins. zero democracy.", "gold", statRules.perfect) : "",
     byDraws[0]?.d ? statCrimeCard("draw merchant guild", tiedNames(byDraws, (team) => team.d), `${formatCount(byDraws[0].d, "draw")}. plot avoided.`, "gold", statRules.draw) : "",
-    byGoals[0] ? statCrimeCard("goals goblin", tiedNames(byGoals, (team) => team.gf), `${formatCount(byGoals[0].gf, "goal")} in group play. subtle.`, "", statRules.goals) : "",
+    byGoals[0] ? statCrimeCard("upregulated offense", tiedNames(byGoals, (team) => team.gf), `${formatCount(byGoals[0].gf, "goal")} in group play. promoter stuck on.`, "", statRules.goals) : "",
     byLeaks[0] ? statCrimeCard("open science defense", tiedNames(byLeaks, (team) => team.ga), `${formatCount(byLeaks[0].ga, "goal")} allowed. peer review pending.`, "danger", statRules.leak) : "",
     byWall[0] ? statCrimeCard("clean sheet cartel", tiedNames(byWall, (team) => team.ga), `${formatCount(byWall[0].ga, "goal")} allowed. rude to attackers.`, "gold", statRules.wall) : ""
   ].filter(Boolean);
