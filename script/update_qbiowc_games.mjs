@@ -278,6 +278,7 @@ async function main() {
   const stats = await scorerStats(teamMeta, results, data.players || {});
   data.scorers = { overall: stats.overall, teams: stats.teams };
   data.players = stats.players;
+  data.groupMatchStats = Object.fromEntries(groupResults.map((result) => [result.id, stats.matchStats.get(result.id) || {}]));
   data.matchResults = Object.fromEntries(results.flatMap((result) => {
     const matchId = knockoutKickoffs[kickoffKey(result.date)];
     const scorers = stats.matchScorers.get(result.id) || { home: [], away: [] };

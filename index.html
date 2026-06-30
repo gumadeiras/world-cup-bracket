@@ -336,7 +336,8 @@
     }
 
     .leaderboard-head,
-    .stat-crimes__head {
+    .stat-crimes__head,
+    .stat-crimes > summary {
       display: flex;
       flex-wrap: wrap;
       gap: 8px 14px;
@@ -347,7 +348,8 @@
     }
 
     .leaderboard-head p,
-    .stat-crimes__head p {
+    .stat-crimes__head p,
+    .stat-crimes > summary p {
       margin: 0 0 8px;
       color: var(--muted);
       font-size: var(--type-sm);
@@ -397,7 +399,25 @@
       text-transform: none;
     }
 
-    .stat-crimes__head {
+    .stat-crimes > summary {
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .stat-crimes > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .stat-crimes > summary h2::before {
+      content: "▸ ";
+    }
+
+    .stat-crimes[open] > summary h2::before {
+      content: "▾ ";
+    }
+
+    .stat-crimes__head,
+    .stat-crimes > summary {
       border-bottom: 0;
       margin-bottom: 10px;
     }
@@ -409,6 +429,7 @@
     }
 
     .stat-card {
+      position: relative;
       display: grid;
       align-content: start;
       gap: 7px;
@@ -424,6 +445,76 @@
       color: var(--muted);
       font-size: var(--type-sm);
       text-transform: none;
+    }
+
+    .stat-card-title {
+      display: flex;
+      gap: 6px;
+      align-items: baseline;
+      min-width: 0;
+      padding-right: 26px;
+    }
+
+    .stat-card-info {
+      position: absolute;
+      z-index: 10;
+      top: 8px;
+      right: 10px;
+      left: 10px;
+      display: grid;
+      justify-items: end;
+      pointer-events: none;
+    }
+
+    .stat-card-info summary {
+      display: inline-grid;
+      place-items: center;
+      cursor: pointer;
+      list-style: none;
+      pointer-events: auto;
+    }
+
+    .stat-card-info summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .stat-card-info summary i {
+      display: inline-grid;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 18px;
+      height: 18px;
+      border: 1px solid var(--line);
+      color: var(--red);
+      font-size: var(--type-sm);
+      font-style: normal;
+      font-weight: 700;
+      line-height: 1;
+      text-transform: none;
+    }
+
+    .stat-card-info p {
+      display: none;
+      position: absolute;
+      top: 24px;
+      right: 0;
+      width: 100%;
+      margin: 6px 0 0;
+      border: 1px solid var(--ink);
+      background: var(--paper);
+      color: var(--ink);
+      padding: 8px;
+      box-shadow: 4px 4px 0 rgba(176, 8, 47, 0.16);
+      font-size: var(--type-sm);
+      line-height: 1.35;
+      text-transform: none;
+      pointer-events: auto;
+    }
+
+    .stat-card-info[open] p,
+    .stat-card-info:hover p,
+    .stat-card-info:focus-within p {
+      display: block;
     }
 
     .stat-card strong {
@@ -1882,13 +1973,25 @@
       </div>
     </section>
 
-    <section class="stat-crimes" aria-label="QBio stat crimes">
-      <div class="stat-crimes__head">
-        <h2>QBio Stat Crimes</h2>
+    <details class="stat-crimes smooth-details" aria-label="round of 32 QBio stat crimes" open>
+      <summary>
+        <h2>Round of 32 QBio Stat Crimes</h2>
         <p data-stat-crimes-updated></p>
+      </summary>
+      <div class="details-body">
+        <div class="stat-crimes__grid" data-stat-crimes></div>
       </div>
-      <div class="stat-crimes__grid" data-stat-crimes></div>
-    </section>
+    </details>
+
+    <details class="stat-crimes smooth-details" aria-label="group stage stat crimes">
+      <summary>
+        <h2>Group Stage Stat Crimes</h2>
+        <p data-group-stat-crimes-updated></p>
+      </summary>
+      <div class="details-body">
+        <div class="stat-crimes__grid" data-group-stat-crimes></div>
+      </div>
+    </details>
 
     <div class="info-grid">
       <section class="leaderboard" aria-label="leaderboard">
