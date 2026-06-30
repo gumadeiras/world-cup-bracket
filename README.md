@@ -4,7 +4,7 @@ Static prediction bracket for the QBio World Cup pool.
 
 Live page: <https://qbiowc.gumadeiras.com/>
 
-![QBio World Cup bracket screenshot](assets/screenshot.png)
+![QBio World Cup bracket screenshot](assets/screenshot-2026-06-30.png)
 
 ## Local update
 
