@@ -1021,8 +1021,8 @@ function renderStatCrimesPanel(target, updatedEl, { completed, includeBracket, m
   })).sort((a, b) => b.points - a.points || a.row.bracketName.localeCompare(b.row.bracketName))[0];
 
   const characterDetail = mainCharacter?.red
-    ? `${formatCount(mainCharacter.red, "red card")}. ${formatCount(mainCharacter.yellow, "yellow card")}. ${mainCharacter.fouls} fouls. very subtle.`
-    : `${mainCharacter?.yellow || 0} cards. ${mainCharacter?.fouls || 0} fouls. very subtle.`;
+    ? `${formatCount(mainCharacter.red, "red card")}. ${formatCount(mainCharacter.yellow, "yellow card")}. ${mainCharacter.fouls} fouls. not exactly background noise.`
+    : `${mainCharacter?.yellow || 0} cards. ${mainCharacter?.fouls || 0} fouls. not exactly background noise.`;
   const teamCards = [
     includeBracket && cooked?.wrong ? statCrimeCard("QBio got cooked", `${cooked.picks} picked ${cooked.pickName}`, `${resultOutcome(cooked.result)}. receipts archived.`, "danger", statRules.cooked) : "",
     possessionFraud ? statCrimeCard("possession is a social construct", possessionFraud.loser, `+${Math.round(possessionFraud.possession)}% possession and still out.`, "danger", statRules.possession) : "",
