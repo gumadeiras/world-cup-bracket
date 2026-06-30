@@ -281,8 +281,17 @@ export function sanitizePicks(picks) {
 }
 
 async function main() {
+  const data = readData();
+
   if (!sheetCsv) {
-    console.log("Skipped leaderboard import; QBIOWC_SHEET_CSV is not set.");
+    data.leaderboard = (data.leaderboard || []).map((row) => {
+      if (!row.picks) return row;
+      const score = scorePicksDetailed(row.picks, data);
+      return { ...row, ...score.total, picks: sanitizePicks(row.picks), matchBreakdown: score.matches };
+    });
+    data.leaderboardUpdated = timestamp();
+    writeData(data);
+    console.log("Recalculated existing leaderboard rows; QBIOWC_SHEET_CSV is not set.");
     return;
   }
   const response = await fetch(sheetCsv);
@@ -291,7 +300,6 @@ async function main() {
   const [headers, ...rows] = parseCsv(await response.text());
   const allRows = rows.map((entry) => rowObject(headers, entry));
   const formBracketNames = new Set(allRows.map((row) => row["bracket name"]).filter(Boolean));
-  const data = readData();
   const completedIds = new Set(Object.keys(data.matchResults || {}));
   const latestByEmail = new Map();
 
