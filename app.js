@@ -1030,7 +1030,7 @@ function renderMatchFeed() {
   const todayIds = new Set(today.map((entry) => entry.id));
   const next = entries
     .filter((entry) => entry.time >= Date.now() && !todayIds.has(entry.id))
-    .slice(0, 5);
+    .slice(0, 4);
 
   todayMatchesEl.innerHTML = renderMatchStrip(today, "no games today");
   nextMatchesEl.innerHTML = renderMatchStrip(next, "no upcoming games");
