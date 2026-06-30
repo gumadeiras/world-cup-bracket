@@ -123,6 +123,7 @@ const randomizeLabels = [
 const standings = data.standings || [];
 const groupResults = data.groupResults || [];
 const matchResults = data.matchResults || {};
+const liveMatches = data.liveMatches || {};
 const allPlayers = [...new Set(Object.values(data.players || {}).flat())].sort();
 const standingsEl = document.querySelector("[data-standings]");
 const overallStandingsEl = document.querySelector("[data-overall-standings]");
@@ -293,7 +294,14 @@ function pick(id) {
 }
 
 function confirmedMatch(id, home = "", away = "") {
-  const actual = matchResults[id];
+  return alignMatch(matchResults[id], home, away);
+}
+
+function liveMatch(id, home = "", away = "") {
+  return alignMatch(liveMatches[id], home, away);
+}
+
+function alignMatch(actual, home = "", away = "") {
   if (!actual) return null;
   if (home && away && actual.home === away && actual.away === home) {
     return {
@@ -304,6 +312,10 @@ function confirmedMatch(id, home = "", away = "") {
       awayScore: actual.homeScore,
       homeScorers: actual.awayScorers,
       awayScorers: actual.homeScorers,
+      homeShootoutScore: actual.awayShootoutScore,
+      awayShootoutScore: actual.homeShootoutScore,
+      homeShootout: actual.awayShootout,
+      awayShootout: actual.homeShootout,
       winnerSide: actual.winnerSide === "home" ? "away" : actual.winnerSide === "away" ? "home" : ""
     };
   }
@@ -706,35 +718,38 @@ function renderMatch(match, index, stage) {
   const home = label(resolveThirdSlot(homeRaw, id));
   const away = label(resolveThirdSlot(awayRaw, id));
   const actual = confirmedMatch(id, home, away);
-  const data = actual ? {
-    home: actual.homeScore,
-    away: actual.awayScore,
-    homeScorers: actual.homeScorers,
-    awayScorers: actual.awayScorers
+  const live = liveMatch(id, home, away);
+  const locked = Boolean(actual || live);
+  const result = actual || live;
+  const data = result ? {
+    home: result.homeScore,
+    away: result.awayScore,
+    homeScorers: actual?.homeScorers || [],
+    awayScorers: actual?.awayScorers || []
   } : pick(id);
-  const win = winner(id);
+  const win = actual ? winner(id) : live ? "" : winner(id);
   const tied = data.home !== "" && data.away !== "" && data.home != null && data.away != null && Number(data.home) === Number(data.away);
   const homeInfo = slotInfo(home);
   const awayInfo = slotInfo(away);
   const boosted = isBoosted(homeInfo, awayInfo);
   const showSub = stage === "round of 32";
   return `
-        <article class="match ${stage === "final" ? "final" : ""} ${tied ? "tied" : ""} ${boosted ? "boosted" : ""} ${actual ? "locked-result" : ""}" data-match-id="${id}" style="animation-delay:${index * 24}ms">
-          <span class="match-id">M${id}</span>${actual ? `<span class="boost-badge">final score</span>` : boosted ? `<span class="boost-badge">2x points</span>` : ""}
+        <article class="match ${stage === "final" ? "final" : ""} ${tied ? "tied" : ""} ${boosted ? "boosted" : ""} ${actual ? "locked-result" : ""} ${live ? "live-result" : ""}" data-match-id="${id}" style="animation-delay:${index * 24}ms">
+          <span class="match-id">M${id}</span>${actual ? `<span class="boost-badge">final score</span>` : live ? `<span class="boost-badge live-badge">live</span>` : boosted ? `<span class="boost-badge">2x points</span>` : ""}
           <time class="kickoff">${kickoffs[id]}</time>
           <div class="team ${win === homeInfo.main ? "winner" : ""}">
         ${renderSlot(homeInfo, showSub, showSub)}
-        ${renderScoreBox(id, "home", homeInfo.main, data.home, actual)}
-        ${renderScorers(data, id, "home", homeInfo, Boolean(actual))}
+        ${renderScoreBox(id, "home", homeInfo.main, data.home, locked)}
+        ${actual ? renderScorers(data, id, "home", homeInfo, true) : ""}
       </div>
       <div class="team ${win === awayInfo.main ? "winner" : ""}">
         ${renderSlot(awayInfo, showSub, showSub)}
-        ${renderScoreBox(id, "away", awayInfo.main, data.away, actual)}
-        ${renderScorers(data, id, "away", awayInfo, Boolean(actual))}
+        ${renderScoreBox(id, "away", awayInfo.main, data.away, locked)}
+        ${actual ? renderScorers(data, id, "away", awayInfo, true) : ""}
       </div>
       ${renderShootout(actual, homeInfo, awayInfo)}
       ${renderCrowdPicks(id)}
-      ${actual ? "" : `<div class="advance" aria-label="match ${id} penalty winner">
+      ${locked ? "" : `<div class="advance" aria-label="match ${id} penalty winner">
         <button type="button" data-advance="${id}:home" aria-pressed="${data.advance === "home"}">${escapeHtml(homeInfo.main)}</button>
         <button type="button" data-advance="${id}:away" aria-pressed="${data.advance === "away"}">${escapeHtml(awayInfo.main)}</button>
       </div>`}
@@ -948,7 +963,7 @@ function submissionPayload() {
   save();
   const submitted = sanitizePicks(JSON.parse(JSON.stringify(state)));
   submitted.matches ||= {};
-  Object.keys(matchResults).forEach((id) => {
+  new Set([...Object.keys(matchResults), ...Object.keys(liveMatches)]).forEach((id) => {
     submitted.matches[id] = { home: null, away: null, advance: "", homeScorers: [], awayScorers: [] };
   });
   return {
@@ -979,7 +994,7 @@ async function copyText(text, label) {
 
 function hasAnyScore() {
   return Object.entries(state.matches || {}).some(([id, match]) =>
-    !matchResults[id] && (
+    !matchResults[id] && !liveMatches[id] && (
       match.home !== "" && match.home != null || match.away !== "" && match.away != null
     )
   );

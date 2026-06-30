@@ -177,10 +177,11 @@ async function main() {
   if (!response.ok) throw new Error(`ESPN scoreboard failed: ${response.status}`);
   const scoreboard = await response.json();
   const results = [];
+  const liveResults = [];
 
   for (const event of (scoreboard.events || []).sort((a, b) => new Date(a.date) - new Date(b.date))) {
     const competition = event.competitions?.[0];
-    if (!competition?.status?.type?.completed) continue;
+    if (!competition?.status?.type) continue;
     const competitors = competition.competitors || [];
     if (competitors.length !== 2) continue;
     const [first, second] = competitors;
@@ -192,6 +193,19 @@ async function main() {
     const homeScore = Number(home.score);
     const awayScore = Number(away.score);
     const winnerSide = home.winner ? "home" : away.winner ? "away" : homeScore > awayScore ? "home" : awayScore > homeScore ? "away" : "";
+    if (competition.status.type.state === "in") {
+      liveResults.push({
+        id: event.id,
+        date: event.date,
+        home: homeName,
+        away: awayName,
+        homeScore,
+        awayScore,
+        status: competition.status.type.shortDetail || competition.status.type.detail || competition.status.type.description || "live"
+      });
+      continue;
+    }
+    if (!competition.status.type.completed) continue;
     const hasShootout = /PEN/.test(competition.status.type.name || "") && Number.isFinite(Number(home.shootoutScore)) && Number.isFinite(Number(away.shootoutScore));
     results.push({
       id: event.id,
@@ -231,6 +245,10 @@ async function main() {
     const scorers = stats.matchScorers.get(result.id) || { home: [], away: [] };
     const shootout = stats.shootouts.get(result.id) || {};
     return matchId ? [[matchId, { ...result, homeScorers: scorers.home, awayScorers: scorers.away, ...shootout }]] : [];
+  }));
+  data.liveMatches = Object.fromEntries(liveResults.flatMap((result) => {
+    const matchId = knockoutKickoffs[kickoffKey(result.date)];
+    return matchId ? [[matchId, result]] : [];
   }));
   data.updated = timestamp();
   writeData(data);

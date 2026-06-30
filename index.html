@@ -1214,6 +1214,11 @@
       border-color: var(--green);
     }
 
+    .match.live-result {
+      border-color: var(--red);
+      box-shadow: 6px 6px 0 rgba(176, 8, 47, 0.14);
+    }
+
     .kickoff {
       color: var(--muted);
       font-size: var(--type-sm);
@@ -1247,6 +1252,11 @@
       font-weight: 700;
       line-height: 1;
       text-transform: uppercase;
+    }
+
+    .live-badge {
+      border-color: var(--red);
+      color: var(--red);
     }
 
     .status-badge {
@@ -1367,6 +1377,10 @@
       background: var(--boost);
       color: var(--green);
       cursor: not-allowed;
+    }
+
+    .match.live-result .score:disabled {
+      color: var(--red);
     }
 
     .score::-webkit-outer-spin-button,
