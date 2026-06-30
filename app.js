@@ -132,6 +132,8 @@ const standingsUpdatedEl = document.querySelector("[data-standings-updated]");
 const leaderboardEl = document.querySelector("[data-leaderboard]");
 const leaderboardUpdatedEl = document.querySelector("[data-leaderboard-updated]");
 const entryDetailEl = document.querySelector("[data-entry-detail]");
+const todayMatchesEl = document.querySelector("[data-today-matches]");
+const nextMatchesEl = document.querySelector("[data-next-matches]");
 const board = document.querySelector("[data-board]");
 const toast = document.querySelector("[data-toast]");
 
@@ -493,7 +495,23 @@ function renderEntryMatch(row, match) {
 
 function kickoffStamp(id) {
   const match = /^(\w+) (\w+) (\d+) · (.+)$/.exec(kickoffs[id] || "");
-  return match ? Date.parse(`${match[2]} ${match[3]}, 2026 ${match[4]}`) : Number(id);
+  return match ? kickoffTime(id) : Number(id);
+}
+
+function kickoffTime(id) {
+  const match = /^(\w+) (\w+) (\d+) · (.+)$/.exec(kickoffs[id] || "");
+  return match ? Date.parse(`${match[2]} ${match[3]}, 2026 ${match[4]} GMT-0400`) : Number(id);
+}
+
+function etSoccerDateKey(time) {
+  time -= 6 * 60 * 60 * 1000;
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "America/New_York",
+    year: "numeric"
+  }).formatToParts(new Date(time)).map((part) => [part.type, part.value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
 function dateOrderedMatches(round) {
@@ -704,6 +722,37 @@ function renderCrowdPicks(id) {
   </div>`;
 }
 
+function allMatchEntries() {
+  return rounds.flatMap((round) => round.matches.map((match, index) => ({
+    id: String(match[0]),
+    index,
+    match,
+    round,
+    time: kickoffTime(match[0])
+  }))).sort((a, b) => a.time - b.time || Number(a.id) - Number(b.id));
+}
+
+function renderMatchStrip(entries, emptyText) {
+  return entries.length
+    ? entries.map((entry, index) => renderMatch(entry.match, index, entry.round.name)).join("")
+    : `<p class="match-strip__empty">${escapeHtml(emptyText)}</p>`;
+}
+
+function renderMatchFeed() {
+  const todayKey = etSoccerDateKey(Date.now());
+  const entries = allMatchEntries();
+  const today = entries.filter((entry) => etSoccerDateKey(entry.time) === todayKey);
+  const todayIds = new Set(today.map((entry) => entry.id));
+  const next = entries
+    .filter((entry) => entry.time >= Date.now() && !todayIds.has(entry.id))
+    .slice(0, 5);
+
+  todayMatchesEl.innerHTML = renderMatchStrip(today, "no games today");
+  nextMatchesEl.innerHTML = renderMatchStrip(next, "no upcoming games");
+  bindMatchControls(todayMatchesEl);
+  bindMatchControls(nextMatchesEl);
+}
+
 function renderScoreBox(id, side, team, score, actual) {
   return `<input class="score" data-score="${id}:${side}" type="number" min="0" max="99" inputmode="numeric" value="${score ?? ""}" aria-label="match ${id} ${team} score" ${actual ? "disabled" : ""}>`;
 }
@@ -811,10 +860,11 @@ function enhanceDetails() {
 function renderAffected(id) {
   affectedMatchIds(id).forEach((matchId) => {
     const meta = matchMeta(matchId);
-    const card = board.querySelector(`[data-match-id="${matchId}"]`);
-    if (!meta || !card) return;
-    card.outerHTML = renderMatch(meta.match, meta.index, meta.round.name);
-    bindMatchControls(board.querySelector(`[data-match-id="${matchId}"]`));
+    if (!meta) return;
+    document.querySelectorAll(`[data-match-id="${matchId}"]`).forEach((card) => {
+      card.outerHTML = renderMatch(meta.match, meta.index, meta.round.name);
+    });
+    document.querySelectorAll(`[data-match-id="${matchId}"]`).forEach(bindMatchControls);
   });
   board.querySelector(".champion")?.replaceWith(htmlToElement(renderChampion()));
   layoutBracketCards();
@@ -937,6 +987,7 @@ function updateScrollHint() {
 }
 
 function render() {
+  renderMatchFeed();
   board.innerHTML = rounds.map((round) => `
     <section class="round">
       <h2>${round.name}<span class="date">${round.date}</span></h2>

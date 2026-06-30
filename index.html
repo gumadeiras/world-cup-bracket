@@ -1099,6 +1099,63 @@
       scroll-snap-type: x proximity;
     }
 
+    .match-feed {
+      display: grid;
+      gap: 14px;
+      margin: 18px 0;
+    }
+
+    .match-feed__section {
+      display: grid;
+      gap: 8px;
+    }
+
+    .match-feed h2 {
+      margin: 0;
+      border-block: 1px solid var(--ink);
+      padding: 7px 0;
+      font-size: var(--type-lg);
+      text-transform: uppercase;
+    }
+
+    .match-strip {
+      display: grid;
+      grid-auto-columns: minmax(280px, 320px);
+      grid-auto-flow: column;
+      gap: 12px;
+      align-items: start;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 2px max(18px, env(safe-area-inset-right)) 18px 2px;
+      scroll-snap-type: x proximity;
+    }
+
+    .match-strip .match {
+      align-self: start;
+      scroll-snap-align: start;
+    }
+
+    .match-strip .boost-badge,
+    .match-strip .match-id,
+    .match-strip .status-badge,
+    .match-strip .crowd-picks b,
+    .match-strip .crowd-picks em {
+      align-self: start;
+      max-width: 100%;
+      white-space: normal;
+    }
+
+    .match-strip .advance {
+      align-self: start;
+    }
+
+    .match-strip__empty {
+      margin: 0;
+      color: var(--muted);
+      font-size: var(--type-sm);
+      text-transform: uppercase;
+    }
+
     .scroll-hint {
       display: none;
       margin: -4px 0 6px;
@@ -1243,6 +1300,7 @@
 
     .boost-badge {
       justify-self: start;
+      align-self: start;
       width: max-content;
       border: 1px solid var(--gold);
       background: var(--paper);
@@ -1733,6 +1791,17 @@
         <p>give the prompt to your favorite agent. answer silly questions. get a ready-to-paste bracket. use restore above.</p>
       </div>
       <button class="secondary" type="button" data-agent-prompt>copy agent prompt</button>
+    </section>
+
+    <section class="match-feed" aria-label="upcoming knockout matches">
+      <div class="match-feed__section">
+        <h2>happening today</h2>
+        <div class="match-strip" data-today-matches></div>
+      </div>
+      <div class="match-feed__section">
+        <h2>upcoming games</h2>
+        <div class="match-strip" data-next-matches></div>
+      </div>
     </section>
 
     <div class="info-grid">
