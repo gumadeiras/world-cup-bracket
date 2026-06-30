@@ -960,23 +960,39 @@
       padding: 8px;
     }
 
-    .standings > summary {
+    .standings > summary,
+    .overall summary,
+    .scorer-leaders summary {
       display: flex;
-      justify-content: space-between;
       gap: 12px;
+      align-items: baseline;
       cursor: pointer;
       list-style: none;
+      font-size: var(--type-md);
+      font-weight: 700;
+      text-transform: uppercase;
     }
 
-    .standings > summary::-webkit-details-marker {
+    .standings > summary {
+      justify-content: space-between;
+    }
+
+    .standings > summary::-webkit-details-marker,
+    .overall summary::-webkit-details-marker,
+    .scorer-leaders summary::-webkit-details-marker {
       display: none;
     }
 
-    .standings > summary h2::before {
+    .standings > summary h2::before,
+    .overall summary::before,
+    .scorer-leaders summary::before {
       content: "▸ ";
+      flex: 0 0 auto;
     }
 
-    .standings[open] > summary h2::before {
+    .standings[open] > summary h2::before,
+    .overall[open] summary::before,
+    .scorer-leaders[open] summary::before {
       content: "▾ ";
     }
 
@@ -1065,6 +1081,7 @@
 
     .overall {
       width: min(100%, 760px);
+      margin-bottom: 18px;
       border: 1px solid var(--line);
       background: rgba(255, 250, 240, 0.78);
       padding: 8px;
@@ -1076,10 +1093,7 @@
     }
 
     .overall summary {
-      cursor: pointer;
-      font-size: var(--type-md);
-      font-weight: 700;
-      text-transform: uppercase;
+      margin-bottom: 0;
     }
 
     .overall-row {
@@ -1117,13 +1131,6 @@
       border: 1px solid var(--line);
       background: rgba(255, 250, 240, 0.78);
       padding: 8px;
-    }
-
-    .scorer-leaders summary {
-      cursor: pointer;
-      font-size: var(--type-md);
-      font-weight: 700;
-      text-transform: uppercase;
     }
 
     .scorer-cards {
