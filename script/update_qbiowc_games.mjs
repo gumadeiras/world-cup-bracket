@@ -34,10 +34,9 @@ function timestamp() {
     day: "numeric",
     year: "numeric",
     hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short"
+    minute: "2-digit"
   }).formatToParts(new Date()).map((part) => [part.type, part.value]));
-  return `${parts.month} ${parts.day}, ${parts.year} · ${parts.hour}:${parts.minute} ${parts.dayPeriod} ET`;
+  return `${parts.month} ${parts.day}, ${parts.year} · ${parts.hour}:${parts.minute} ${parts.dayPeriod}`;
 }
 
 function blankTeam(team) {

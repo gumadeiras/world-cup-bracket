@@ -163,7 +163,7 @@ function currentThirds() {
 }
 
 function renderStandings() {
-  if (standingsUpdatedEl) standingsUpdatedEl.textContent = `updated: ${data.updated || "TBD"}`;
+  if (standingsUpdatedEl) standingsUpdatedEl.textContent = `updated: ${displayTimestamp(data.updated)}`;
   const liveThirds = currentThirds();
   standingsEl.innerHTML = standings.map((group) => `
     <article class="group">
@@ -426,9 +426,13 @@ function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char]));
 }
 
+function displayTimestamp(value) {
+  return String(value || "TBD").replace(/\s+[A-Z]{2,4}$/, "");
+}
+
 function renderLeaderboard() {
   if (leaderboardUpdatedEl) {
-    leaderboardUpdatedEl.textContent = `last updated ${data.leaderboardUpdated || data.updated || "TBD"}`;
+    leaderboardUpdatedEl.textContent = `last updated ${displayTimestamp(data.leaderboardUpdated || data.updated)}`;
   }
   const rows = sortedLeaderboard();
   leaderboardEl.innerHTML = rows.length ? rows.map((row, index) => `
@@ -864,7 +868,7 @@ function renderStatCrimes() {
 
 function renderStatCrimesPanel(target, updatedEl, { completed, includeBracket, matchIds }) {
   if (!target) return;
-  if (updatedEl) updatedEl.textContent = `last updated ${data.updated || "TBD"}`;
+  if (updatedEl) updatedEl.textContent = `last updated ${displayTimestamp(data.updated)}`;
   const rows = data.leaderboard || [];
   const completedIds = new Set(completed.map((entry) => String(entry.id)));
 

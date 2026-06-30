@@ -80,10 +80,9 @@ function timestamp() {
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "America/New_York",
-    timeZoneName: "short"
+    timeZone: "America/New_York"
   }).formatToParts(new Date()).map((part) => [part.type, part.value]));
-  return `${parts.month} ${parts.day}, ${parts.year} · ${parts.hour}:${parts.minute} ${parts.dayPeriod} ET`;
+  return `${parts.month} ${parts.day}, ${parts.year} · ${parts.hour}:${parts.minute} ${parts.dayPeriod}`;
 }
 
 function blankScore() {

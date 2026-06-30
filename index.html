@@ -951,15 +951,57 @@
     }
 
     .standings {
-      display: grid;
-      gap: 10px;
+      display: block;
+      min-width: 0;
+      max-width: 100%;
       margin-bottom: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 250, 240, 0.78);
+      padding: 8px;
+    }
+
+    .standings > summary {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .standings > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .standings > summary h2::before {
+      content: "▸ ";
+    }
+
+    .standings[open] > summary h2::before {
+      content: "▾ ";
+    }
+
+    .standings[open] > summary {
+      margin-bottom: 10px;
     }
 
     .standings h2 {
       margin: 0;
       font-size: var(--type-md);
       text-transform: uppercase;
+    }
+
+    .standings > summary .date {
+      color: var(--muted);
+      font-size: var(--type-sm);
+      text-align: right;
+      text-transform: uppercase;
+    }
+
+    .standings > .details-body {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
     }
 
     .legend {
@@ -1013,8 +1055,11 @@
     }
 
     .groups-scroll {
+      min-width: 0;
+      max-width: 100%;
       overflow-x: auto;
       overflow-y: hidden;
+      margin-top: 10px;
       padding-bottom: 18px;
     }
 
@@ -1024,6 +1069,10 @@
       background: rgba(255, 250, 240, 0.78);
       padding: 8px;
       overflow-x: auto;
+    }
+
+    .overall:not([open]) {
+      width: 100%;
     }
 
     .overall summary {
@@ -2038,28 +2087,31 @@
       </div>
     </div>
 
-    <section class="standings" aria-label="current group standings">
-      <h2>group stage <span class="date" data-standings-updated></span></h2>
-      <div class="legend" aria-label="standings legend">
-        <span class="form-key">form = <i class="win"></i> win <i class="draw"></i> draw <i class="loss"></i> loss</span>
-        <span>pts = points</span>
-        <span>gd = goal difference</span>
-        <span>gf = goals for</span>
-        <span>+3rd = currently among best eight third-place teams</span>
-      </div>
-      <div class="groups-scroll">
-        <div class="groups" data-standings></div>
-      </div>
-      <details class="overall smooth-details">
-        <summary>overall group stage table</summary>
-        <div class="details-body">
-          <div class="overall-row overall-head">
-            <b>#</b><b>team</b><b>place</b><b>form</b><b>pts</b><b>gd</b><b>gf</b>
-          </div>
-          <div data-overall-standings></div>
+    <details class="standings smooth-details" aria-label="current group standings">
+      <summary><h2>group stage</h2><span class="date" data-standings-updated></span></summary>
+      <div class="details-body">
+        <div class="legend" aria-label="standings legend">
+          <span class="form-key">form = <i class="win"></i> win <i class="draw"></i> draw <i class="loss"></i> loss</span>
+          <span>pts = points</span>
+          <span>gd = goal difference</span>
+          <span>gf = goals for</span>
+          <span>+3rd = currently among best eight third-place teams</span>
         </div>
-      </details>
-    </section>
+        <div class="groups-scroll">
+          <div class="groups" data-standings></div>
+        </div>
+      </div>
+    </details>
+
+    <details class="overall smooth-details">
+      <summary>overall group stage table</summary>
+      <div class="details-body">
+        <div class="overall-row overall-head">
+          <b>#</b><b>team</b><b>place</b><b>form</b><b>pts</b><b>gd</b><b>gf</b>
+        </div>
+        <div data-overall-standings></div>
+      </div>
+    </details>
 
     <details class="scorer-leaders smooth-details">
       <summary>scorer leaders</summary>
