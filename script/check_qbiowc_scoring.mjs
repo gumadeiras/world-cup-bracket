@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
-import { mergeCompletedPicks, scorePicks } from "./update_qbiowc_leaderboard.mjs";
+import { mergeCompletedPicks, sanitizePicks, scorePicks } from "./update_qbiowc_leaderboard.mjs";
 
 const data = {
   matchResults: {
@@ -31,6 +31,11 @@ const nullScores = {
   matches: { 73: { home: null, away: null }, 75: { home: "", away: "" } }
 };
 assert.deepEqual(scorePicks(nullScores, data), { points: 0, exact: 0, result: 0, scorers: 0 });
+
+const overlongScorers = { boostCountry: "", matches: { 74: { home: 0, away: 1, homeScorers: ["hidden"], awayScorers: ["q1", "extra"] } } };
+const overlongData = { matchResults: { 74: { home: "A", away: "B", homeScore: 0, awayScore: 1, winnerSide: "away", homeScorers: ["hidden"], awayScorers: ["q1"] } } };
+assert.deepEqual(sanitizePicks(overlongScorers).matches[74], { home: 0, away: 1, advance: "", homeScorers: [], awayScorers: ["q1"] });
+assert.deepEqual(scorePicks(overlongScorers, overlongData), { points: 4, exact: 1, result: 0, scorers: 1 });
 
 assert.deepEqual(
   mergeCompletedPicks(

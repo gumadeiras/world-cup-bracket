@@ -123,6 +123,7 @@ export function scorePicks(picks, data) {
 }
 
 export function scorePicksDetailed(picks, data) {
+  picks = sanitizePicks(picks || {});
   const actualRaw = data.matchResults || {};
   const actualCache = new Map();
   const predictedCache = new Map();
@@ -241,6 +242,16 @@ function hasCompleteScore(match) {
   return match && hasScore(match.home) && hasScore(match.away);
 }
 
+function scorerLimit(match, side) {
+  return hasScore(match?.[side]) ? Math.max(0, Math.min(8, Number(match[side]))) : 0;
+}
+
+function cleanScorers(match, side) {
+  return (Array.isArray(match?.[`${side}Scorers`]) ? match[`${side}Scorers`] : [])
+    .filter(Boolean)
+    .slice(0, scorerLimit(match, side));
+}
+
 export function mergeCompletedPicks(previous, latest, completedIds) {
   const merged = {
     ...latest,
@@ -254,7 +265,7 @@ export function mergeCompletedPicks(previous, latest, completedIds) {
   return merged;
 }
 
-function sanitizePicks(picks) {
+export function sanitizePicks(picks) {
   return {
     boostCountry: picks.boostCountry || "",
     matches: Object.fromEntries(Object.entries(picks.matches || {})
@@ -263,8 +274,8 @@ function sanitizePicks(picks) {
         home: match.home ?? null,
         away: match.away ?? null,
         advance: match.advance || "",
-        homeScorers: Array.isArray(match.homeScorers) ? match.homeScorers.filter(Boolean) : [],
-        awayScorers: Array.isArray(match.awayScorers) ? match.awayScorers.filter(Boolean) : []
+        homeScorers: cleanScorers(match, "home"),
+        awayScorers: cleanScorers(match, "away")
       }]))
   };
 }
@@ -290,8 +301,8 @@ async function main() {
     if (removedBracketNames.has(row["bracket name"])) continue;
 
     const previous = latestByEmail.get(email);
-    const picks = parsePicks(row);
-    const merged = previous ? mergeCompletedPicks(parsePicks(previous), picks, completedIds) : picks;
+    const picks = sanitizePicks(parsePicks(row));
+    const merged = sanitizePicks(previous ? mergeCompletedPicks(parsePicks(previous), picks, completedIds) : picks);
     latestByEmail.set(email, { ...row, picks: JSON.stringify(merged) });
   }
 

@@ -252,12 +252,32 @@ function aggregateForm(team) {
   ].slice(0, 3);
 }
 
+function scorerLimit(match, side) {
+  const score = match?.[side];
+  return score === "" || score == null ? 0 : Math.max(0, Math.min(8, Number(score) || 0));
+}
+
+function trimScorers(match, side) {
+  const key = `${side}Scorers`;
+  match[key] = (Array.isArray(match[key]) ? match[key] : []).filter(Boolean).slice(0, scorerLimit(match, side));
+}
+
+function sanitizePicks(picks) {
+  picks.matches ||= {};
+  Object.values(picks.matches).forEach((match) => {
+    trimScorers(match, "home");
+    trimScorers(match, "away");
+  });
+  return picks;
+}
+
 function save() {
   state.name = document.querySelector("[data-player-name]").value.trim();
   state.bracketName = document.querySelector("[data-bracket-name]").value.trim();
   state.email = document.querySelector("[data-player-email]").value.trim();
   state.boostCountry = document.querySelector("[data-boost-country]").value;
   delete state.country;
+  sanitizePicks(state);
   localStorage.setItem(stateKey, JSON.stringify(state));
 }
 
@@ -352,6 +372,7 @@ function loser(id) {
 function updateScore(id, side, value) {
   state.matches[id] ||= {};
   state.matches[id][side] = value === "" ? "" : Math.max(0, Math.min(99, Number(value)));
+  trimScorers(state.matches[id], side);
   if (state.matches[id].home !== "" && state.matches[id].away !== "" && state.matches[id].home != null && state.matches[id].away != null && Number(state.matches[id].home) !== Number(state.matches[id].away)) {
     delete state.matches[id].advance;
   }
@@ -811,7 +832,7 @@ function show(message) {
 
 function submissionPayload() {
   save();
-  const submitted = JSON.parse(JSON.stringify(state));
+  const submitted = sanitizePicks(JSON.parse(JSON.stringify(state)));
   submitted.matches ||= {};
   Object.keys(matchResults).forEach((id) => {
     submitted.matches[id] = { home: null, away: null, advance: "", homeScorers: [], awayScorers: [] };
@@ -830,7 +851,8 @@ function googleFormReady() {
 }
 
 async function copyPicks() {
-  await navigator.clipboard.writeText(JSON.stringify(state, null, 2));
+  save();
+  await navigator.clipboard.writeText(JSON.stringify(sanitizePicks(JSON.parse(JSON.stringify(state))), null, 2));
 }
 
 function hasAnyScore() {
@@ -872,7 +894,7 @@ function restorePicks() {
   try {
     const restored = parseRestoreInput(raw);
     validateRestoreInput(restored);
-    localStorage.setItem(stateKey, JSON.stringify(restored));
+    localStorage.setItem(stateKey, JSON.stringify(sanitizePicks(restored)));
     location.reload();
   } catch (error) {
     const message = restoreErrorMessage(error);
