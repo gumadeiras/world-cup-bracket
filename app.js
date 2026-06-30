@@ -574,8 +574,8 @@ function slotInfo(value) {
   const status = slotStatus(value);
   if (team) return { main: team.n, sub: value, team, status };
   if (/^3/.test(value)) return { main: value, sub: "best third-place pool", status };
-  if (/^W\d+/.test(value)) return { main: value.replace("W", "M"), sub: "winner", status };
-  if (/^L\d+/.test(value)) return { main: value.replace("L", "M"), sub: "semifinal loser", status };
+  if (/^W\d+/.test(value)) return { main: "TBD", sub: "winner", status };
+  if (/^L\d+/.test(value)) return { main: "TBD", sub: "semifinal loser", status };
   return { main: value, sub: "predicted", status };
 }
 
@@ -642,6 +642,50 @@ function renderShootout(actual, homeInfo, awayInfo) {
   </div>`;
 }
 
+function pickWinnerSide(match) {
+  if (match?.home == null || match?.away == null || match.home === "" || match.away === "") return "";
+  if (+match.home > +match.away) return "home";
+  if (+match.away > +match.home) return "away";
+  return match.advance === "home" || match.advance === "away" ? match.advance : "";
+}
+
+function crowdPicks(id) {
+  const rows = data.leaderboard || [];
+  const scores = new Map();
+  let homeWins = 0;
+  let awayWins = 0;
+  let total = 0;
+  let scoreTotal = 0;
+  for (const row of rows) {
+    if (!row.picks?.matches) continue;
+    withPicks(row.picks, () => {
+      const match = pick(id);
+      if (match.home == null || match.away == null || match.home === "" || match.away === "") return;
+      const win = pickWinnerSide(match);
+      if (win === "home") homeWins++;
+      if (win === "away") awayWins++;
+      if (win) total++;
+      const score = `${match.home}-${match.away}`;
+      scores.set(score, (scores.get(score) || 0) + 1);
+      scoreTotal++;
+    });
+  }
+  if (!total && !scoreTotal) return null;
+  const topScore = [...scores].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] || "";
+  return { homePct: total ? Math.round(homeWins * 100 / total) : 0, awayPct: total ? Math.round(awayWins * 100 / total) : 0, total, scoreTotal, topScore };
+}
+
+function renderCrowdPicks(id, homeInfo, awayInfo) {
+  const crowd = crowdPicks(id);
+  if (!crowd) return "";
+  return `<div class="crowd-picks">
+    <span>QBio picks</span>
+    ${crowd.total ? `<b>${crowd.homePct}% ${escapeHtml(homeInfo.main)}</b><b>${crowd.awayPct}% ${escapeHtml(awayInfo.main)}</b>` : ""}
+    ${crowd.topScore ? `<em>top score ${escapeHtml(crowd.topScore)}</em>` : ""}
+    <small>${crowd.scoreTotal} bracket${crowd.scoreTotal === 1 ? "" : "s"}</small>
+  </div>`;
+}
+
 function renderScoreBox(id, side, team, score, actual) {
   return `<input class="score" data-score="${id}:${side}" type="number" min="0" max="99" inputmode="numeric" value="${score ?? ""}" aria-label="match ${id} ${team} score" ${actual ? "disabled" : ""}>`;
 }
@@ -682,6 +726,7 @@ function renderMatch(match, index, stage) {
         ${renderScorers(data, id, "away", awayInfo, Boolean(actual))}
       </div>
       ${renderShootout(actual, homeInfo, awayInfo)}
+      ${renderCrowdPicks(id, homeInfo, awayInfo)}
       ${actual ? "" : `<div class="advance" aria-label="match ${id} penalty winner">
         <button type="button" data-advance="${id}:home" aria-pressed="${data.advance === "home"}">${escapeHtml(homeInfo.main)}</button>
         <button type="button" data-advance="${id}:away" aria-pressed="${data.advance === "away"}">${escapeHtml(awayInfo.main)}</button>

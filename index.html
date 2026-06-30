@@ -1401,6 +1401,39 @@
       overflow-wrap: anywhere;
     }
 
+    .crowd-picks {
+      display: flex;
+      grid-column: 1 / -1;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      border-top: 1px solid var(--line);
+      padding: 7px 8px 0;
+      color: var(--muted);
+      font-size: var(--type-sm);
+      font-variant-numeric: tabular-nums;
+      text-transform: uppercase;
+    }
+
+    .crowd-picks span {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .crowd-picks b,
+    .crowd-picks em {
+      border: 1px solid var(--line);
+      background: rgba(255, 250, 240, 0.72);
+      padding: 2px 5px;
+      color: var(--green);
+      font-style: normal;
+      line-height: 1;
+    }
+
+    .crowd-picks em {
+      color: var(--red);
+    }
+
     .shootout-panel {
       display: grid;
       grid-column: 1 / -1;
