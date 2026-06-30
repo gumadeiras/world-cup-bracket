@@ -942,7 +942,7 @@
     .ticker__track {
       display: flex;
       min-width: max-content;
-      animation: crawl 28s linear infinite;
+      animation: crawl var(--ticker-duration, 28s) linear infinite;
       will-change: transform;
     }
 
@@ -1854,7 +1854,7 @@
 
     @keyframes crawl {
       from { transform: translateX(0); }
-      to { transform: translateX(-50%); }
+      to { transform: translateX(var(--ticker-distance, -50%)); }
     }
 
     @media (max-width: 860px) {
@@ -2032,7 +2032,7 @@
     </div>
 
     <div class="ticker" aria-hidden="true">
-      <div class="ticker__track">
+      <div class="ticker__track" data-ticker-track data-text="round of 32 starts june 28 / boost country games count double / exact score: 3 / correct result: 1 / scorer bonus: +1 each, max 3 / ">
         <span class="ticker__item">round of 32 starts june 28 / boost country games count double / exact score: 3 / correct result: 1 / scorer bonus: +1 each, max 3 / </span>
         <span class="ticker__item">round of 32 starts june 28 / boost country games count double / exact score: 3 / correct result: 1 / scorer bonus: +1 each, max 3 / </span>
       </div>

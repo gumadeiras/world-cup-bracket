@@ -138,6 +138,7 @@ const groupStatCrimesUpdatedEl = document.querySelector("[data-group-stat-crimes
 const entryDetailEl = document.querySelector("[data-entry-detail]");
 const todayMatchesEl = document.querySelector("[data-today-matches]");
 const nextMatchesEl = document.querySelector("[data-next-matches]");
+const tickerTrack = document.querySelector("[data-ticker-track]");
 const board = document.querySelector("[data-board]");
 const toast = document.querySelector("[data-toast]");
 
@@ -689,6 +690,30 @@ function pickWinnerSide(match) {
 
 function formatCount(count, singular, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function renderTicker() {
+  if (!tickerTrack) return;
+  const text = tickerTrack.dataset.text || tickerTrack.textContent.trim();
+  if (!text) return;
+  const probe = document.createElement("span");
+  probe.className = "ticker__item";
+  probe.textContent = text;
+  tickerTrack.replaceChildren(probe);
+  const itemWidth = probe.getBoundingClientRect().width || 1;
+  const visibleWidth = tickerTrack.parentElement?.clientWidth || itemWidth;
+  const copiesPerLoop = Math.max(2, Math.ceil(visibleWidth / itemWidth) + 1);
+  const fragment = document.createDocumentFragment();
+  for (let index = 0; index < copiesPerLoop * 2; index++) {
+    const item = document.createElement("span");
+    item.className = "ticker__item";
+    item.textContent = text;
+    fragment.append(item);
+  }
+  tickerTrack.replaceChildren(fragment);
+  const distance = Math.ceil(itemWidth * copiesPerLoop);
+  tickerTrack.style.setProperty("--ticker-distance", `-${distance}px`);
+  tickerTrack.style.setProperty("--ticker-duration", `${Math.max(24, distance / 54)}s`);
 }
 
 function scoreText(match) {
@@ -1572,12 +1597,14 @@ document.addEventListener("keydown", (event) => {
 });
 
 if (!renderEntryDetail()) {
+  renderTicker();
   renderStandings();
   renderLeaderboard();
   renderStatCrimes();
   render();
   enhanceDetails();
   window.addEventListener("resize", () => {
+    renderTicker();
     layoutBracketCards();
     drawBracketLines();
     updateScrollHint();
