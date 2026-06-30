@@ -652,9 +652,8 @@ function pickWinnerSide(match) {
 function crowdPicks(id) {
   const rows = data.leaderboard || [];
   const scores = new Map();
-  let homeWins = 0;
-  let awayWins = 0;
-  let total = 0;
+  const teamCounts = new Map();
+  let teamTotal = 0;
   let scoreTotal = 0;
   for (const row of rows) {
     if (!row.picks?.matches) continue;
@@ -662,25 +661,33 @@ function crowdPicks(id) {
       const match = pick(id);
       if (match.home == null || match.away == null || match.home === "" || match.away === "") return;
       const win = pickWinnerSide(match);
-      if (win === "home") homeWins++;
-      if (win === "away") awayWins++;
-      if (win) total++;
+      const matchTeams = teams(id);
+      const winnerInfo = slotInfo(win === "home" ? matchTeams[0] : win === "away" ? matchTeams[1] : "");
+      const winnerName = winnerInfo.team?.n || "";
+      if (winnerName) {
+        teamCounts.set(winnerName, (teamCounts.get(winnerName) || 0) + 1);
+        teamTotal++;
+      }
       const score = `${match.home}-${match.away}`;
       scores.set(score, (scores.get(score) || 0) + 1);
       scoreTotal++;
     });
   }
-  if (!total && !scoreTotal) return null;
+  if (!teamTotal && !scoreTotal) return null;
   const topScore = [...scores].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] || "";
-  return { homePct: total ? Math.round(homeWins * 100 / total) : 0, awayPct: total ? Math.round(awayWins * 100 / total) : 0, total, scoreTotal, topScore };
+  const topTeams = [...teamCounts]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 2)
+    .map(([team, count]) => ({ team, pct: Math.round(count * 100 / teamTotal) }));
+  return { topTeams, teamTotal, scoreTotal, topScore };
 }
 
-function renderCrowdPicks(id, homeInfo, awayInfo) {
+function renderCrowdPicks(id) {
   const crowd = crowdPicks(id);
   if (!crowd) return "";
   return `<div class="crowd-picks">
     <span>QBio picks</span>
-    ${crowd.total ? `<b>${crowd.homePct}% ${escapeHtml(homeInfo.main)}</b><b>${crowd.awayPct}% ${escapeHtml(awayInfo.main)}</b>` : ""}
+    ${crowd.topTeams.map(({ team, pct }) => `<b>${pct}% ${escapeHtml(team)}</b>`).join("")}
     ${crowd.topScore ? `<em>top score ${escapeHtml(crowd.topScore)}</em>` : ""}
     <small>${crowd.scoreTotal} bracket${crowd.scoreTotal === 1 ? "" : "s"}</small>
   </div>`;
@@ -726,7 +733,7 @@ function renderMatch(match, index, stage) {
         ${renderScorers(data, id, "away", awayInfo, Boolean(actual))}
       </div>
       ${renderShootout(actual, homeInfo, awayInfo)}
-      ${renderCrowdPicks(id, homeInfo, awayInfo)}
+      ${renderCrowdPicks(id)}
       ${actual ? "" : `<div class="advance" aria-label="match ${id} penalty winner">
         <button type="button" data-advance="${id}:home" aria-pressed="${data.advance === "home"}">${escapeHtml(homeInfo.main)}</button>
         <button type="button" data-advance="${id}:away" aria-pressed="${data.advance === "away"}">${escapeHtml(awayInfo.main)}</button>
