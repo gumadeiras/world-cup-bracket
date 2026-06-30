@@ -739,12 +739,12 @@ function renderMatch(match, index, stage) {
           <div class="team ${win === homeInfo.main ? "winner" : ""}">
         ${renderSlot(homeInfo, showSub, showSub)}
         ${renderScoreBox(id, "home", homeInfo.main, data.home, locked)}
-        ${actual ? renderScorers(data, id, "home", homeInfo, true) : ""}
+        ${live ? "" : renderScorers(data, id, "home", homeInfo, Boolean(actual))}
       </div>
       <div class="team ${win === awayInfo.main ? "winner" : ""}">
         ${renderSlot(awayInfo, showSub, showSub)}
         ${renderScoreBox(id, "away", awayInfo.main, data.away, locked)}
-        ${actual ? renderScorers(data, id, "away", awayInfo, true) : ""}
+        ${live ? "" : renderScorers(data, id, "away", awayInfo, Boolean(actual))}
       </div>
       ${renderShootout(actual, homeInfo, awayInfo)}
       ${renderCrowdPicks(id)}
