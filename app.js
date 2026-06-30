@@ -579,8 +579,8 @@ function slotInfo(value) {
   return { main: value, sub: "predicted", status };
 }
 
-function renderSlot(info, showStatus = false) {
-  return `<span class="slot ${showStatus ? info.status || "pending" : ""}">${info.team ? `<img class="flag" src="${info.team.l}" alt="">` : ""}<strong>${escapeHtml(info.main)}</strong><small>${escapeHtml(info.sub)}${showStatus ? ` <em>${escapeHtml(info.status || "pending")}</em>` : ""}</small></span>`;
+function renderSlot(info, showSub = true, showStatus = false) {
+  return `<span class="slot ${showStatus ? info.status || "pending" : ""}">${info.team ? `<img class="flag" src="${info.team.l}" alt="">` : ""}<strong>${escapeHtml(info.main)}</strong>${showSub ? `<small>${escapeHtml(info.sub)}${showStatus ? ` <em>${escapeHtml(info.status || "pending")}</em>` : ""}</small>` : ""}</span>`;
 }
 
 function renderChampion() {
@@ -603,6 +603,49 @@ function renderScorers(matchData, id, side, info, locked = false) {
     </select>`).join("")}</div>`;
 }
 
+function hasShootout(actual) {
+  return Number.isFinite(actual?.homeShootoutScore) && Number.isFinite(actual?.awayShootoutScore);
+}
+
+function shootoutSummary(actual) {
+  if (!hasShootout(actual)) return "";
+  const winnerName = actual.winnerSide === "home" ? actual.home : actual.away;
+  const winnerPens = actual.winnerSide === "home" ? actual.homeShootoutScore : actual.awayShootoutScore;
+  const loserPens = actual.winnerSide === "home" ? actual.awayShootoutScore : actual.homeShootoutScore;
+  return `${winnerName} wins ${winnerPens}-${loserPens}`;
+}
+
+function shootoutMarks(shots = []) {
+  return shots.map((shot) => {
+    const made = typeof shot === "object" ? shot.made : shot;
+    const player = typeof shot === "object" ? shot.player : "";
+    return `<span title="${escapeAttribute(player || (made ? "scored" : "missed"))}">${made ? "⚽" : "❌"}</span>`;
+  }).join("");
+}
+
+function shootoutRow(info, actual, side) {
+  const shots = actual?.[`${side}Shootout`] || [];
+  const score = actual?.[`${side}ShootoutScore`];
+  const marks = shots.length ? shootoutMarks(shots) : `${score}`;
+  return `<div class="shootout-row">
+    <span>${info.team ? `<img class="flag" src="${info.team.l}" alt="${escapeAttribute(info.main)}">` : ""}</span>
+    <b>${marks}</b>
+  </div>`;
+}
+
+function renderShootout(actual, homeInfo, awayInfo) {
+  if (!hasShootout(actual)) return "";
+  return `<div class="shootout-panel">
+    <strong>${escapeHtml(shootoutSummary(actual))}</strong>
+    ${shootoutRow(homeInfo, actual, "home")}
+    ${shootoutRow(awayInfo, actual, "away")}
+  </div>`;
+}
+
+function renderScoreBox(id, side, team, score, actual) {
+  return `<input class="score" data-score="${id}:${side}" type="number" min="0" max="99" inputmode="numeric" value="${score ?? ""}" aria-label="match ${id} ${team} score" ${actual ? "disabled" : ""}>`;
+}
+
 function isBoosted(homeInfo, awayInfo) {
   return state.boostCountry && [homeInfo.team?.n, awayInfo.team?.n].includes(state.boostCountry);
 }
@@ -623,21 +666,22 @@ function renderMatch(match, index, stage) {
   const homeInfo = slotInfo(home);
   const awayInfo = slotInfo(away);
   const boosted = isBoosted(homeInfo, awayInfo);
-  const showStatus = stage === "round of 32";
+  const showSub = stage === "round of 32";
   return `
         <article class="match ${stage === "final" ? "final" : ""} ${tied ? "tied" : ""} ${boosted ? "boosted" : ""} ${actual ? "locked-result" : ""}" data-match-id="${id}" style="animation-delay:${index * 24}ms">
           <span class="match-id">M${id}</span>${actual ? `<span class="boost-badge">final score</span>` : boosted ? `<span class="boost-badge">2x points</span>` : ""}
           <time class="kickoff">${kickoffs[id]}</time>
-          <div class="team ${win === home ? "winner" : ""}">
-        ${renderSlot(homeInfo, showStatus)}
-        <input class="score" data-score="${id}:home" type="number" min="0" max="99" inputmode="numeric" value="${data.home ?? ""}" aria-label="match ${id} ${home} score" ${actual ? "disabled" : ""}>
+          <div class="team ${win === homeInfo.main ? "winner" : ""}">
+        ${renderSlot(homeInfo, showSub, showSub)}
+        ${renderScoreBox(id, "home", homeInfo.main, data.home, actual)}
         ${renderScorers(data, id, "home", homeInfo, Boolean(actual))}
       </div>
-      <div class="team ${win === away ? "winner" : ""}">
-        ${renderSlot(awayInfo, showStatus)}
-        <input class="score" data-score="${id}:away" type="number" min="0" max="99" inputmode="numeric" value="${data.away ?? ""}" aria-label="match ${id} ${away} score" ${actual ? "disabled" : ""}>
+      <div class="team ${win === awayInfo.main ? "winner" : ""}">
+        ${renderSlot(awayInfo, showSub, showSub)}
+        ${renderScoreBox(id, "away", awayInfo.main, data.away, actual)}
         ${renderScorers(data, id, "away", awayInfo, Boolean(actual))}
       </div>
+      ${renderShootout(actual, homeInfo, awayInfo)}
       ${actual ? "" : `<div class="advance" aria-label="match ${id} penalty winner">
         <button type="button" data-advance="${id}:home" aria-pressed="${data.advance === "home"}">${escapeHtml(homeInfo.main)}</button>
         <button type="button" data-advance="${id}:away" aria-pressed="${data.advance === "away"}">${escapeHtml(awayInfo.main)}</button>

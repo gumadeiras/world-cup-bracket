@@ -87,6 +87,7 @@ function kickoffKey(date) {
 async function scorerStats(teamMeta, results, existingPlayers = {}) {
   const players = new Map();
   const matchScorers = new Map(results.map((result) => [result.id, { home: [], away: [] }]));
+  const shootouts = new Map();
   const teamPlayerNames = new Map([...teamMeta.keys()].map((team) => [
     team,
     new Map((existingPlayers[team] || []).map((name) => [playerNameKey(name), name]))
@@ -104,6 +105,12 @@ async function scorerStats(teamMeta, results, existingPlayers = {}) {
 
   for (const { result, summary } of summaries) {
     const matchGoals = { home: 0, away: 0 };
+    const shootout = { homeShootout: [], awayShootout: [] };
+    for (const entry of summary.shootout || []) {
+      const side = entry.team === result.home ? "home" : entry.team === result.away ? "away" : null;
+      if (side) shootout[`${side}Shootout`] = (entry.shots || []).map((shot) => ({ made: Boolean(shot.didScore), player: shot.player || "" }));
+    }
+    if (shootout.homeShootout.length || shootout.awayShootout.length) shootouts.set(result.id, shootout);
     for (const roster of summary.rosters || []) {
       const team = teamMeta.get(roster.team?.displayName);
       if (!team) continue;
@@ -150,6 +157,7 @@ async function scorerStats(teamMeta, results, existingPlayers = {}) {
       team,
       [...names.values()].sort((a, b) => a.localeCompare(b))
     ])),
+    shootouts,
     matchScorers
   };
 }
@@ -184,7 +192,17 @@ async function main() {
     const homeScore = Number(home.score);
     const awayScore = Number(away.score);
     const winnerSide = home.winner ? "home" : away.winner ? "away" : homeScore > awayScore ? "home" : awayScore > homeScore ? "away" : "";
-    results.push({ id: event.id, date: event.date, home: homeName, away: awayName, homeScore, awayScore, winnerSide });
+    const hasShootout = /PEN/.test(competition.status.type.name || "") && Number.isFinite(Number(home.shootoutScore)) && Number.isFinite(Number(away.shootoutScore));
+    results.push({
+      id: event.id,
+      date: event.date,
+      home: homeName,
+      away: awayName,
+      homeScore,
+      awayScore,
+      winnerSide,
+      ...(hasShootout ? { homeShootoutScore: Number(home.shootoutScore), awayShootoutScore: Number(away.shootoutScore) } : {})
+    });
   }
 
   const groups = Object.fromEntries(data.standings.map((group) => [group.g, new Map(group.teams.map((team) => [team.n, blankTeam(team)]))]));
@@ -211,7 +229,8 @@ async function main() {
   data.matchResults = Object.fromEntries(results.flatMap((result) => {
     const matchId = knockoutKickoffs[kickoffKey(result.date)];
     const scorers = stats.matchScorers.get(result.id) || { home: [], away: [] };
-    return matchId ? [[matchId, { ...result, homeScorers: scorers.home, awayScorers: scorers.away }]] : [];
+    const shootout = stats.shootouts.get(result.id) || {};
+    return matchId ? [[matchId, { ...result, homeScorers: scorers.home, awayScorers: scorers.away, ...shootout }]] : [];
   }));
   data.updated = timestamp();
   writeData(data);
