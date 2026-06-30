@@ -2,7 +2,9 @@ name: update scores
 
 on:
   schedule:
-    - cron: "0,30 0-4,16-23 * * *"
+    - cron: "15,45 16-23 * * *"
+    - cron: "15,45 0-5 * * *"
+    - cron: "15 6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -25,8 +27,8 @@ jobs:
       - name: Check update window
         id: window
         run: |
-          now=$(TZ=America/New_York date +%Y%m%d%H)
-          if [ "$now" -le 2026072000 ]; then
+          now=$(TZ=America/New_York date +%Y%m%d%H%M)
+          if [ "$now" -le 202607200215 ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "cleanup=true" >> "$GITHUB_OUTPUT"
