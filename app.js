@@ -763,9 +763,11 @@ function scorelineCounts() {
 
 function boostPointRows() {
   const rows = data.leaderboard || [];
+  const tested = new Set(Object.values(matchResults).flatMap((result) => [result.home, result.away]));
   const countries = new Map();
   for (const row of rows) {
     const country = row.boostCountry || "none";
+    if (!tested.has(country)) continue;
     const entry = countries.get(country) || { country, believers: 0, points: 0 };
     entry.believers++;
     entry.points += (row.matchBreakdown || []).reduce((sum, match) => sum + (match.multiplier === 2 ? match.points / 2 : 0), 0);
@@ -863,11 +865,8 @@ function renderStatCrimes() {
     }, 0)
   })).sort((a, b) => b.points - a.points || a.row.bracketName.localeCompare(b.row.bracketName))[0];
 
-  statCrimesEl.innerHTML = [
+  const teamCards = [
     cooked?.wrong ? statCrimeCard("QBio got cooked", `${cooked.picks} picked ${cooked.pickName}`, `${resultOutcome(cooked.result)}. receipts archived.`, "danger") : "",
-    coward?.count ? statCrimeCard("coward index", coward.row.bracketName, `${formatCount(coward.count, "low-score pick")}. defensive biology.`, "gold") : "",
-    sicko?.count ? statCrimeCard("sicko index", sicko.row.bracketName, `${formatCount(sicko.count, "draw")} predicted. seek help or tenure.`, "gold") : "",
-    boost ? statCrimeCard("boost unemployment office", boost.country, `${formatCount(boost.believers, "believer")}. ${boost.points} boost pts`, boost.points ? "" : "danger") : "",
     possessionFraud ? statCrimeCard("possession is a social construct", possessionFraud.loser, `+${Math.round(possessionFraud.possession)}% possession and still out.`, "danger") : "",
     shotFraud ? statCrimeCard("shots are just vibes", shotFraud.loser, `+${shotFraud.shots} shots and nothing to show for it.`, "danger") : "",
     modelMismatch
@@ -875,11 +874,18 @@ function renderStatCrimes() {
       : statCrimeCard("model mismatch", "no split yet", "QBio and ESPN odds copied each other's homework.", "gold"),
     mainCharacter ? statCrimeCard("main character energy", mainCharacter.team, `${mainCharacter.cards} cards. ${mainCharacter.fouls} fouls. very subtle.`, "gold") : "",
     crossMerchant ? statCrimeCard("cross merchant award", crossMerchant.team, `${formatCount(crossMerchant.crosses, "cross", "crosses")} ${crossMerchant.won ? "and survived." : "and still lost."}`, "gold") : "",
-    favoriteScore ? statCrimeCard("lab favorite scoreline", favoriteScore[0], `${formatCount(favoriteScore[1], "bracket")} chose the house special.`) : "",
+    favoriteScore ? statCrimeCard("lab favorite scoreline", favoriteScore[0], `${formatCount(favoriteScore[1], "bracket")} chose the house special.`) : ""
+  ].filter(Boolean);
+  const bracketCards = [
+    coward?.count ? statCrimeCard("coward index", coward.row.bracketName, `${formatCount(coward.count, "low-score pick")}. defensive biology.`, "gold") : "",
+    sicko?.count ? statCrimeCard("sicko index", sicko.row.bracketName, `${formatCount(sicko.count, "draw")} predicted. seek help or tenure.`, "gold") : "",
+    boost ? statCrimeCard("boost unemployment office", boost.country, `${formatCount(boost.believers, "believer")}. ${boost.points} boost pts`, boost.points ? "" : "danger") : "",
     scorerFraud ? statCrimeCard("pichichi fraud detector", scorerFraud.row.bracketName, `${scorerFraud.attempts} scorer picks. ${scorerFraud.hits} hits. ambition is not accuracy.`, "danger") : "",
     deterministic ? statCrimeCard("deterministic biology award", deterministic.bracketName, `${deterministic.exact || 0} exact scores. ${deterministic.points || 0} pts.`) : "",
     parked?.points ? statCrimeCard("park the bus memorial trophy", parked.row.bracketName, `${formatCount(parked.points, "ugly point")}. methods ugly, results significant.`, "gold") : ""
-  ].filter(Boolean).join("");
+  ].filter(Boolean);
+
+  statCrimesEl.innerHTML = [...teamCards, ...bracketCards].join("");
 }
 
 function crowdPicks(id) {
