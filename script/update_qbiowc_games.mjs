@@ -6,6 +6,12 @@ const dataPath = "data.js";
 const prefix = "window.QBIOWC_DATA=";
 const scoreboardUrl = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260720&limit=200";
 const summaryUrl = (eventId) => `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=${eventId}`;
+const eventMatches = {
+  760486: 73, 760489: 74, 760488: 75, 760487: 76, 760492: 77, 760490: 78, 760491: 79, 760495: 80,
+  760494: 81, 760493: 82, 760496: 83, 760497: 84, 760498: 85, 760500: 86, 760501: 87, 760499: 88,
+  760503: 89, 760502: 90, 760504: 91, 760505: 92, 760506: 93, 760507: 94, 760509: 95, 760508: 96,
+  760510: 97, 760511: 98, 760512: 99, 760513: 100, 760514: 101, 760515: 102, 760516: 103, 760517: 104
+};
 const knockoutKickoffs = {
   "2026-06-28T19:00": 73, "2026-06-29T20:30": 74, "2026-06-30T01:00": 75, "2026-06-29T17:00": 76,
   "2026-06-30T21:00": 77, "2026-06-30T17:00": 78, "2026-07-01T01:00": 79, "2026-07-01T16:00": 80,
@@ -81,6 +87,10 @@ function addTeamPlayer(teamPlayerNames, team, name) {
 
 function kickoffKey(date) {
   return new Date(date).toISOString().slice(0, 16);
+}
+
+function matchIdFor(result) {
+  return eventMatches[result.id] || knockoutKickoffs[kickoffKey(result.date)];
 }
 
 function statValue(stats = [], name) {
@@ -279,17 +289,17 @@ async function main() {
   data.players = stats.players;
   data.groupMatchStats = Object.fromEntries(groupResults.map((result) => [result.id, stats.matchStats.get(result.id) || {}]));
   data.matchResults = Object.fromEntries(results.flatMap((result) => {
-    const matchId = knockoutKickoffs[kickoffKey(result.date)];
+    const matchId = matchIdFor(result);
     const scorers = stats.matchScorers.get(result.id) || { home: [], away: [] };
     const shootout = stats.shootouts.get(result.id) || {};
     return matchId ? [[matchId, { ...result, homeScorers: scorers.home, awayScorers: scorers.away, ...shootout }]] : [];
   }));
   data.matchStats = Object.fromEntries(results.flatMap((result) => {
-    const matchId = knockoutKickoffs[kickoffKey(result.date)];
+    const matchId = matchIdFor(result);
     return matchId ? [[matchId, stats.matchStats.get(result.id) || {}]] : [];
   }));
   data.liveMatches = Object.fromEntries(liveResults.flatMap((result) => {
-    const matchId = knockoutKickoffs[kickoffKey(result.date)];
+    const matchId = matchIdFor(result);
     return matchId ? [[matchId, result]] : [];
   }));
   data.updated = timestamp();
