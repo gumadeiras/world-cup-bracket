@@ -320,6 +320,8 @@ function alignMatch(actual, home = "", away = "") {
       awayScore: actual.homeScore,
       homeScorers: actual.awayScorers,
       awayScorers: actual.homeScorers,
+      homeScorerTimes: actual.awayScorerTimes,
+      awayScorerTimes: actual.homeScorerTimes,
       homeShootoutScore: actual.awayShootoutScore,
       awayShootoutScore: actual.homeShootoutScore,
       homeShootout: actual.awayShootout,
@@ -691,9 +693,10 @@ function renderChampion() {
 function renderScorers(matchData, id, side, info, locked = false) {
   const count = Math.max(0, Math.min(8, Number(matchData[side]) || 0));
   const saved = Array.isArray(matchData[side + "Scorers"]) ? matchData[side + "Scorers"] : [];
+  const times = Array.isArray(matchData[side + "ScorerTimes"]) ? matchData[side + "ScorerTimes"] : [];
   const players = data.players?.[info.team?.n] || allPlayers;
   if (!count) return `<div class="scorers"></div>`;
-  if (locked) return `<div class="scorers confirmed">${saved.slice(0, count).map((scorer, index) => `<span>${escapeHtml(scorer || `goal ${index + 1}`)}</span>`).join("")}</div>`;
+  if (locked) return `<div class="scorers confirmed">${saved.slice(0, count).map((scorer, index) => `<span>${times[index] ? `<em>${escapeHtml(times[index])}</em> ` : ""}${escapeHtml(scorer || `goal ${index + 1}`)}</span>`).join("")}</div>`;
   return `<div class="scorers">${Array.from({ length: count }, (_, index) => `
     <select class="scorer" data-scorer="${id}:${side}:${index}" aria-label="match ${id} ${info.main} goal ${index + 1} scorer">
       <option value="">goal ${index + 1}</option>
@@ -1148,7 +1151,9 @@ function renderMatch(match, index, stage) {
     home: result.homeScore,
     away: result.awayScore,
     homeScorers: actual?.homeScorers || [],
-    awayScorers: actual?.awayScorers || []
+    awayScorers: actual?.awayScorers || [],
+    homeScorerTimes: actual?.homeScorerTimes || [],
+    awayScorerTimes: actual?.awayScorerTimes || []
   } : pick(id);
   const win = actual ? winner(id) : live ? "" : winner(id);
   const tied = data.home !== "" && data.away !== "" && data.home != null && data.away != null && Number(data.home) === Number(data.away);

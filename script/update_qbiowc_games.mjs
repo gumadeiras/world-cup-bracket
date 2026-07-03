@@ -128,9 +128,24 @@ function compactMatchStats(summary, result) {
   };
 }
 
+function matchGoalDetails(summary, result) {
+  return (summary.header?.competitions?.[0]?.details || [])
+    .filter((entry) => entry.scoringPlay)
+    .reduce((goals, entry) => {
+      const side = entry.team?.displayName === result.home ? "home" : entry.team?.displayName === result.away ? "away" : null;
+      if (!side) return goals;
+      goals[side].push({
+        name: entry.ownGoal ? "own goal" : entry.participants?.[0]?.athlete?.displayName || "own goal",
+        time: entry.clock?.displayValue || ""
+      });
+      return goals;
+    }, { home: [], away: [] });
+}
+
 async function scorerStats(teamMeta, results, existingPlayers = {}) {
   const players = new Map();
   const matchScorers = new Map(results.map((result) => [result.id, { home: [], away: [] }]));
+  const matchScorerTimes = new Map(results.map((result) => [result.id, { home: [], away: [] }]));
   const matchStats = new Map();
   const shootouts = new Map();
   const teamPlayerNames = new Map([...teamMeta.keys()].map((team) => [
@@ -179,6 +194,12 @@ async function scorerStats(teamMeta, results, existingPlayers = {}) {
       const ownGoals = score - matchGoals[side];
       if (ownGoals > 0) matchScorers.get(result.id)[side].push(...Array(ownGoals).fill("own goal"));
     }
+    const goalDetails = matchGoalDetails(summary, result);
+    for (const side of ["home", "away"]) {
+      if (goalDetails[side].length !== result[`${side}Score`]) continue;
+      matchScorers.get(result.id)[side] = goalDetails[side].map((goal) => goal.name);
+      matchScorerTimes.get(result.id)[side] = goalDetails[side].map((goal) => goal.time);
+    }
   }
 
   for (const [teamName, total] of teamGoals) {
@@ -205,7 +226,8 @@ async function scorerStats(teamMeta, results, existingPlayers = {}) {
     ])),
     matchStats,
     shootouts,
-    matchScorers
+    matchScorers,
+    matchScorerTimes
   };
 }
 
@@ -291,8 +313,9 @@ async function main() {
   data.matchResults = Object.fromEntries(results.flatMap((result) => {
     const matchId = matchIdFor(result);
     const scorers = stats.matchScorers.get(result.id) || { home: [], away: [] };
+    const scorerTimes = stats.matchScorerTimes.get(result.id) || { home: [], away: [] };
     const shootout = stats.shootouts.get(result.id) || {};
-    return matchId ? [[matchId, { ...result, homeScorers: scorers.home, awayScorers: scorers.away, ...shootout }]] : [];
+    return matchId ? [[matchId, { ...result, homeScorers: scorers.home, awayScorers: scorers.away, homeScorerTimes: scorerTimes.home, awayScorerTimes: scorerTimes.away, ...shootout }]] : [];
   }));
   data.matchStats = Object.fromEntries(results.flatMap((result) => {
     const matchId = matchIdFor(result);
