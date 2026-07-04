@@ -117,6 +117,25 @@ function countScorers(predicted = [], actual = []) {
   return hits;
 }
 
+function parseSubmissionTime(value) {
+  const match = /^(\d+)\/(\d+)\/(\d+) (\d+):(\d+):(\d+)$/.exec(value || "");
+  if (match) {
+    const [, month, day, year, hour, minute, second] = match.map(Number);
+    return Date.UTC(year, month - 1, day, hour + 4, minute, second);
+  }
+  const fallback = Date.parse(value || "");
+  return Number.isFinite(fallback) ? fallback : null;
+}
+
+function stampSubmittedMatches(picks, submittedAt) {
+  if (!submittedAt) return picks;
+  const matchSubmittedAt = { ...(picks.matchSubmittedAt || {}) };
+  for (const [id, match] of Object.entries(picks.matches || {})) {
+    if (hasCompleteScore(match)) matchSubmittedAt[id] = submittedAt;
+  }
+  return { ...picks, matchSubmittedAt };
+}
+
 export function scorePicks(picks, data) {
   return scorePicksDetailed(picks, data).total;
 }
@@ -167,10 +186,17 @@ export function scorePicksDetailed(picks, data) {
     return raw;
   }
 
-  function predictedTeamFromSlot(slot) {
+  function actualKnownBefore(upstreamId, targetId) {
+    const submittedAt = Number(picks.matchSubmittedAt?.[targetId]);
+    const kickoffAt = Date.parse(actualRaw[upstreamId]?.date || "");
+    return Number.isFinite(submittedAt) && Number.isFinite(kickoffAt) && submittedAt >= kickoffAt + 3 * 60 * 60 * 1000;
+  }
+
+  function predictedTeamFromSlot(slot, targetId) {
     const [, kind, id] = /^([WL])(\d+)$/.exec(slot) || [];
     if (!kind) return null;
-    const teams = predictedTeams(id);
+    if (actualKnownBefore(id, targetId)) return actualTeamFromSlot(slot);
+    const teams = predictedTeams(id, targetId);
     const pick = picks.matches?.[id];
     const side = pick ? matchWinnerSide(pick) : "";
     if (!teams || !side) return null;
@@ -179,19 +205,21 @@ export function scorePicksDetailed(picks, data) {
     return kind === "W" ? winner : loser;
   }
 
-  function predictedTeams(id) {
+  function predictedTeams(id, targetId = id) {
     id = String(id);
-    if (predictedCache.has(id)) return predictedCache.get(id);
+    targetId = String(targetId);
+    const cacheKey = `${targetId}:${id}`;
+    if (predictedCache.has(cacheKey)) return predictedCache.get(cacheKey);
     if (firstRoundIds.has(id)) {
       const actual = actualMatch(id);
       const teams = actual ? { home: actual.home, away: actual.away } : null;
-      predictedCache.set(id, teams);
+      predictedCache.set(cacheKey, teams);
       return teams;
     }
     const match = matchesById.get(id);
-    const teams = match ? { home: predictedTeamFromSlot(match[1]), away: predictedTeamFromSlot(match[2]) } : null;
-    predictedCache.set(id, teams?.home && teams?.away ? teams : null);
-    return predictedCache.get(id);
+    const teams = match ? { home: predictedTeamFromSlot(match[1], targetId), away: predictedTeamFromSlot(match[2], targetId) } : null;
+    predictedCache.set(cacheKey, teams?.home && teams?.away ? teams : null);
+    return predictedCache.get(cacheKey);
   }
 
   const total = blankScore();
@@ -254,19 +282,24 @@ function cleanScorers(match, side) {
 export function mergeCompletedPicks(previous, latest, completedIds) {
   const merged = {
     ...latest,
-    matches: { ...(latest.matches || {}) }
+    matches: { ...(latest.matches || {}) },
+    matchSubmittedAt: { ...(latest.matchSubmittedAt || {}) }
   };
   for (const id of completedIds) {
     if (hasCompleteScore(previous.matches?.[id]) && !hasCompleteScore(latest.matches?.[id])) {
       merged.matches[id] = previous.matches[id];
+      if (previous.matchSubmittedAt?.[id]) merged.matchSubmittedAt[id] = previous.matchSubmittedAt[id];
     }
   }
   return merged;
 }
 
 export function sanitizePicks(picks) {
+  const matchSubmittedAt = Object.fromEntries(Object.entries(picks.matchSubmittedAt || {})
+    .filter(([id, value]) => matchesById.has(String(id)) && Number.isFinite(Number(value))));
   return {
     boostCountry: picks.boostCountry || "",
+    ...(Object.keys(matchSubmittedAt).length ? { matchSubmittedAt } : {}),
     matches: Object.fromEntries(Object.entries(picks.matches || {})
       .filter(([id]) => matchesById.has(String(id)))
       .map(([id, match]) => [id, {
@@ -308,7 +341,7 @@ async function main() {
     if (removedBracketNames.has(row["bracket name"])) continue;
 
     const previous = latestByEmail.get(email);
-    const picks = sanitizePicks(parsePicks(row));
+    const picks = stampSubmittedMatches(sanitizePicks(parsePicks(row)), parseSubmissionTime(row.timestamp));
     const merged = sanitizePicks(previous ? mergeCompletedPicks(parsePicks(previous), picks, completedIds) : picks);
     latestByEmail.set(email, { ...row, picks: JSON.stringify(merged) });
   }

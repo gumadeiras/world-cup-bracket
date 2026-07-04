@@ -5,9 +5,9 @@ import { mergeCompletedPicks, sanitizePicks, scorePicks } from "./update_qbiowc_
 
 const data = {
   matchResults: {
-    73: { home: "A", away: "B", homeScore: 2, awayScore: 1, winnerSide: "home", homeScorers: ["p1", "p2"], awayScorers: ["q1"] },
-    75: { home: "C", away: "D", homeScore: 0, awayScore: 1, winnerSide: "away", homeScorers: [], awayScorers: ["d1"] },
-    90: { home: "A", away: "D", homeScore: 1, awayScore: 0, winnerSide: "home", homeScorers: ["p1"], awayScorers: [] }
+    73: { date: "2026-06-28T19:00Z", home: "A", away: "B", homeScore: 2, awayScore: 1, winnerSide: "home", homeScorers: ["p1", "p2"], awayScorers: ["q1"] },
+    75: { date: "2026-06-30T01:00Z", home: "C", away: "D", homeScore: 0, awayScore: 1, winnerSide: "away", homeScorers: [], awayScorers: ["d1"] },
+    90: { date: "2026-07-04T17:00Z", home: "A", away: "D", homeScore: 1, awayScore: 0, winnerSide: "home", homeScorers: ["p1"], awayScorers: [] }
   }
 };
 
@@ -25,6 +25,10 @@ assert.deepEqual(scorePicks(picks, data), { points: 22, exact: 3, result: 0, sco
 const wrongPath = structuredClone(picks);
 wrongPath.matches[75] = { home: 1, away: 0 };
 assert.deepEqual(scorePicks(wrongPath, data), { points: 6, exact: 1, result: 0, scorers: 3 });
+
+const updatedKnownMatchup = structuredClone(wrongPath);
+updatedKnownMatchup.matchSubmittedAt = { 90: Date.parse("2026-07-03T12:00Z") };
+assert.deepEqual(scorePicks(updatedKnownMatchup, data), { points: 14, exact: 2, result: 0, scorers: 4 });
 
 const nullScores = {
   boostCountry: "",

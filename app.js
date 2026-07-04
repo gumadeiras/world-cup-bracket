@@ -524,10 +524,42 @@ function withPicks(picks, callback) {
   }
 }
 
+function pickedSide(id, home, away) {
+  const data = pick(id);
+  if (data.home === "" || data.away === "" || data.home == null || data.away == null) return "";
+  if (+data.home > +data.away) return "home";
+  if (+data.away > +data.home) return "away";
+  if (data.advance === home) return "home";
+  if (data.advance === away) return "away";
+  return data.advance === "home" || data.advance === "away" ? data.advance : "";
+}
+
+function entryPredictedSlot(raw, id) {
+  const value = resolveThirdSlot(raw, id);
+  const match = /^([WL])(\d+)$/.exec(value);
+  if (!match) return slotInfo(value).main || value;
+  const source = matchMeta(match[2])?.match;
+  if (!source) return value;
+  const home = entryPredictedSlot(source[1], source[0]);
+  const away = entryPredictedSlot(source[2], source[0]);
+  const side = pickedSide(source[0], home, away);
+  if (!side) return value;
+  const winnerName = side === "home" ? home : away;
+  const loserName = side === "home" ? away : home;
+  return match[1] === "W" ? winnerName : loserName;
+}
+
+function entryPredictedMatchText(row, id) {
+  return withPicks(row.picks, () => {
+    const match = matchMeta(id)?.match;
+    return match ? [entryPredictedSlot(match[1], id), entryPredictedSlot(match[2], id)].filter(Boolean).join(" vs ") : "";
+  });
+}
+
 function scoreLine(row, id) {
   const score = (row.matchBreakdown || []).find((match) => String(match.id) === String(id));
   const actual = matchResults[id];
-  if (!score && actual) return `<span class="entry-points closed">closed</span><small>final ${actual.homeScore}-${actual.awayScore} · no points</small>`;
+  if (!score && actual) return `<span class="entry-points closed">closed</span><small>picked ${escapeHtml(entryPredictedMatchText(row, id) || "another matchup")} · no points</small>`;
   if (!score) return `<span class="entry-points pending">pending</span><small>not scored yet</small>`;
   const chips = [
     score.exact ? ["exact", "exact"] : score.result ? ["result", "winner"] : ["miss", "score miss"],
@@ -537,11 +569,10 @@ function scoreLine(row, id) {
   return `<span class="entry-points">+${score.points}</span><small class="entry-score-chips">${chips.map(([kind, text]) => `<em class="${kind}">${escapeHtml(text)}</em>`).join("")}</small>`;
 }
 
-function renderEntryTeam(info, score, scorers, winnerName) {
+function renderEntryTeam(info, score, scorers, winnerName, showDetails = true) {
   return `<div class="entry-team ${winnerName === info.main ? "winner" : ""}">
     <span>${info.team ? `<img class="flag" src="${info.team.l}" alt="">` : ""}<b>${escapeHtml(info.main || "-")}</b></span>
-    <strong>${score ?? "-"}</strong>
-    <small>${escapeHtml((scorers || []).filter(Boolean).join(", ") || "no scorers picked")}</small>
+    ${showDetails ? `<strong>${score ?? "-"}</strong><small>${escapeHtml((scorers || []).filter(Boolean).join(", ") || "no scorers picked")}</small>` : ""}
   </div>`;
 }
 
@@ -557,8 +588,8 @@ function renderEntryMatch(row, match) {
   const missed = score && !score.exact && !score.result;
   return `<article class="entry-match ${boosted ? "boosted" : ""} ${closed ? "closed" : ""} ${missed ? "missed" : ""} ${score?.exact ? "exact" : score?.result ? "result" : ""} ${score?.scorers ? "scorer-hit" : ""}">
     <div class="entry-match-head"><time>${kickoffs[id]}</time><span>${scoreLine(row, id)}</span></div>
-    ${renderEntryTeam(slotInfo(home), pickData.home, pickData.homeScorers, win)}
-    ${renderEntryTeam(slotInfo(away), pickData.away, pickData.awayScorers, win)}
+    ${renderEntryTeam(slotInfo(home), pickData.home, pickData.homeScorers, win, !closed)}
+    ${renderEntryTeam(slotInfo(away), pickData.away, pickData.awayScorers, win, !closed)}
   </article>`;
 }
 
