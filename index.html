@@ -980,7 +980,7 @@
       display: flex;
       min-width: max-content;
       animation: crawl var(--ticker-duration, 28s) linear infinite;
-      will-change: transform;
+      animation-play-state: var(--ticker-play-state, running);
     }
 
     .ticker__item {

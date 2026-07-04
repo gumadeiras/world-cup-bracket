@@ -556,10 +556,18 @@ function entryPredictedMatchText(row, id) {
   });
 }
 
+function completePick(row, id) {
+  const match = row.picks?.matches?.[id];
+  return match && match.home !== "" && match.away !== "" && match.home != null && match.away != null;
+}
+
 function scoreLine(row, id) {
   const score = (row.matchBreakdown || []).find((match) => String(match.id) === String(id));
   const actual = matchResults[id];
-  if (!score && actual) return `<span class="entry-points closed">closed</span><small>picked ${escapeHtml(entryPredictedMatchText(row, id) || "another matchup")} · no points</small>`;
+  if (!score && actual) {
+    const message = completePick(row, id) ? `picked ${entryPredictedMatchText(row, id) || "another matchup"}` : "late submission";
+    return `<span class="entry-points closed">closed</span><small>${escapeHtml(message)} · no points</small>`;
+  }
   if (!score) return `<span class="entry-points pending">pending</span><small>not scored yet</small>`;
   const chips = [
     score.exact ? ["exact", "exact"] : score.result ? ["result", "winner"] : ["miss", "score miss"],
@@ -812,6 +820,11 @@ function renderTicker() {
   const distance = Math.ceil(itemWidth * copiesPerLoop);
   tickerTrack.style.setProperty("--ticker-distance", `-${distance}px`);
   tickerTrack.style.setProperty("--ticker-duration", `${Math.max(24, distance / 54)}s`);
+}
+
+function updateTickerPlayback() {
+  if (!tickerTrack) return;
+  tickerTrack.style.setProperty("--ticker-play-state", document.hidden ? "paused" : "running");
 }
 
 function scoreText(match) {
@@ -1705,13 +1718,16 @@ document.addEventListener("keydown", (event) => {
 
 if (!renderEntryDetail()) {
   renderTicker();
+  updateTickerPlayback();
   renderStandings();
   renderLeaderboard();
   renderStatCrimes();
   render();
   enhanceDetails();
+  document.addEventListener("visibilitychange", updateTickerPlayback);
   window.addEventListener("resize", () => {
     renderTicker();
+    updateTickerPlayback();
     layoutBracketCards();
     drawBracketLines();
     updateScrollHint();
