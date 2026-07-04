@@ -452,6 +452,10 @@ function sortedLeaderboard() {
   return [...(data.leaderboard || [])].sort(compareLeaderboardRows);
 }
 
+function statCrimeRows() {
+  return (data.leaderboard || []).filter((row) => row.bracketName?.trim().toLowerCase() !== "test");
+}
+
 function compareLeaderboardRows(a, b) {
   return b.points - a.points || b.exact - a.exact || b.scorers - a.scorers || a.bracketName.localeCompare(b.bracketName);
 }
@@ -837,7 +841,7 @@ function completedStatMatches(results = matchResults, stats = data.matchStats ||
 function scorelineCounts(matchIds) {
   const counts = new Map();
   const ids = new Set(matchIds.map(String));
-  for (const row of data.leaderboard || []) {
+  for (const row of statCrimeRows()) {
     for (const [id, match] of Object.entries(row.picks?.matches || {})) {
       if (!ids.has(String(id))) continue;
       const text = scoreText(match);
@@ -848,7 +852,7 @@ function scorelineCounts(matchIds) {
 }
 
 function boostPointRows(completed) {
-  const rows = data.leaderboard || [];
+  const rows = statCrimeRows();
   const tested = new Set(completed.flatMap((entry) => [entry.result.home, entry.result.away]));
   const countries = new Map();
   for (const row of rows) {
@@ -932,7 +936,7 @@ function renderStatCrimes() {
 function renderStatCrimesPanel(target, updatedEl, { completed, includeBracket, matchIds }) {
   if (!target) return;
   if (updatedEl) updatedEl.textContent = `updated ${displayTimestamp(data.updated)}`;
-  const rows = data.leaderboard || [];
+  const rows = statCrimeRows();
   const completedIds = new Set(completed.map((entry) => String(entry.id)));
   const statCompleted = completed.filter(hasMatchStats);
 
