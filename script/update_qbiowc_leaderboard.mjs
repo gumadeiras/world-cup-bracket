@@ -9,6 +9,9 @@ const sheetCsv = process.env.QBIOWC_SHEET_CSV || "";
 const ignoredEmails = new Set((process.env.QBIOWC_IGNORED_EMAILS || "").split(",").map((email) => email.trim().toLowerCase()).filter(Boolean));
 const removedBracketNames = new Set(["Assay Madrid"]);
 const firstRoundIds = new Set(Array.from({ length: 16 }, (_, index) => String(index + 73)));
+const roundOf16Ids = ["89", "90", "91", "92", "93", "94", "95", "96"];
+const quarterfinalIds = new Set(["97", "98", "99", "100"]);
+const rescueCutoffId = 97;
 const rounds = [
   [[73, "2A", "2B"], [74, "1E", "3A/B/C/D/F"], [75, "1F", "2C"], [76, "1C", "2F"], [77, "1I", "3C/D/F/G/H"], [78, "2E", "2I"], [79, "1A", "3C/E/F/H/I"], [80, "1L", "3E/H/I/J/K"], [81, "1D", "3B/E/F/I/J"], [82, "1G", "3A/E/H/I/J"], [83, "2K", "2L"], [84, "1H", "2J"], [85, "1B", "3E/F/G/I/J"], [86, "1J", "2H"], [87, "1K", "3D/E/I/J/L"], [88, "2D", "2G"]],
   [[89, "W74", "W77"], [90, "W73", "W75"], [91, "W76", "W78"], [92, "W79", "W80"], [93, "W83", "W84"], [94, "W81", "W82"], [95, "W86", "W88"], [96, "W85", "W87"]],
@@ -140,7 +143,7 @@ export function scorePicks(picks, data) {
   return scorePicksDetailed(picks, data).total;
 }
 
-export function scorePicksDetailed(picks, data) {
+export function scorePicksDetailed(picks, data, options = {}) {
   picks = sanitizePicks(picks || {});
   const actualRaw = data.matchResults || {};
   const actualCache = new Map();
@@ -238,7 +241,17 @@ export function scorePicksDetailed(picks, data) {
       countScorers(pick.awayScorers, actual.awayScorers)
     );
     const multiplier = [actual.home, actual.away].includes(picks.boostCountry) ? 2 : 1;
-    const points = ((exact ? 3 : result ? 1 : 0) + scorers) * multiplier;
+    const basePoints = ((exact ? 3 : result ? 1 : 0) + scorers) * multiplier;
+    const rescue = picks.emergencyFunding || {};
+    const winnerName = actual.winnerSide === "home" ? actual.home : actual.winnerSide === "away" ? actual.away : "";
+    const rescueActive = options.emergencyEligible && rescue.matchId === id && quarterfinalIds.has(id);
+    const rescueTeamWon = rescueActive && rescue.team && rescue.team === winnerName;
+    const rescueBonus = rescueActive
+      ? (exact ? 2 : 0) +
+        (rescueTeamWon && Number.isFinite(actual.homeShootoutScore) && Number.isFinite(actual.awayShootoutScore) ? 2 : 0) +
+        (rescueTeamWon && options.emergencyUnderdogs?.[id] === rescue.team ? 3 : 0)
+      : 0;
+    const points = (rescueActive ? basePoints * 3 : basePoints) + rescueBonus;
 
     total.exact += exact ? 1 : 0;
     total.result += result ? 1 : 0;
@@ -250,7 +263,8 @@ export function scorePicksDetailed(picks, data) {
       exact: exact ? 1 : 0,
       result: result ? 1 : 0,
       scorers,
-      multiplier
+      multiplier,
+      ...(rescueActive ? { emergencyFunding: 1, emergencyBonus: rescueBonus } : {})
     });
   }
   return { total, matches };
@@ -297,8 +311,12 @@ export function mergeCompletedPicks(previous, latest, completedIds) {
 export function sanitizePicks(picks) {
   const matchSubmittedAt = Object.fromEntries(Object.entries(picks.matchSubmittedAt || {})
     .filter(([id, value]) => matchesById.has(String(id)) && Number.isFinite(Number(value))));
+  const emergencyFunding = picks.emergencyFunding?.matchId && quarterfinalIds.has(String(picks.emergencyFunding.matchId))
+    ? { matchId: String(picks.emergencyFunding.matchId), team: picks.emergencyFunding.team || "" }
+    : null;
   return {
     boostCountry: picks.boostCountry || "",
+    ...(emergencyFunding ? { emergencyFunding } : {}),
     ...(Object.keys(matchSubmittedAt).length ? { matchSubmittedAt } : {}),
     matches: Object.fromEntries(Object.entries(picks.matches || {})
       .filter(([id]) => matchesById.has(String(id)))
@@ -312,15 +330,79 @@ export function sanitizePicks(picks) {
   };
 }
 
+function preQuarterfinalScore(row) {
+  const score = scorePicksDetailed(row.picks, { matchResults: Object.fromEntries(Object.entries(row.data.matchResults || {}).filter(([id]) => Number(id) < rescueCutoffId)) });
+  return { ...row, ...score.total, bracketName: row.base.bracketName || "" };
+}
+
+function emergencyEligibleKeys(rows) {
+  const ranked = rows.map(preQuarterfinalScore).sort((a, b) =>
+    b.points - a.points || b.exact - a.exact || b.scorers - a.scorers || a.bracketName.localeCompare(b.bracketName)
+  );
+  return new Set(ranked.slice(Math.ceil(ranked.length / 2)).map((row) => row.key));
+}
+
+function winnerSide(pick) {
+  const side = matchWinnerSide(pick);
+  return side === "home" || side === "away" ? side : "";
+}
+
+function actualTeamFromSlotForData(data, slot) {
+  const [, kind, id] = /^([WL])(\d+)$/.exec(slot) || [];
+  if (!kind) return null;
+  const result = data.matchResults?.[id];
+  if (!result?.winnerSide) return null;
+  const winner = result.winnerSide === "home" ? result.home : result.away;
+  const loser = result.winnerSide === "home" ? result.away : result.home;
+  return kind === "W" ? winner : loser;
+}
+
+function emergencyUnderdogs(rows, data) {
+  return Object.fromEntries([...quarterfinalIds].map((id) => {
+    const match = matchesById.get(id);
+    const home = actualTeamFromSlotForData(data, match?.[1] || "");
+    const away = actualTeamFromSlotForData(data, match?.[2] || "");
+    if (!home || !away) return [id, ""];
+    const counts = { [home]: 0, [away]: 0 };
+    for (const row of rows) {
+      const side = winnerSide(row.picks.matches?.[id] || {});
+      const team = side === "home" ? home : side === "away" ? away : "";
+      if (team) counts[team]++;
+    }
+    if (counts[home] === counts[away]) return [id, ""];
+    return [id, counts[home] < counts[away] ? home : away];
+  }));
+}
+
+function emergencyFundingLive(data) {
+  return roundOf16Ids.every((id) => data.matchResults?.[id]?.winnerSide);
+}
+
+export function scoreRows(rows, data) {
+  const fundingLive = emergencyFundingLive(data);
+  const eligible = fundingLive ? emergencyEligibleKeys(rows.map((row) => ({ ...row, data }))) : new Set();
+  const underdogs = fundingLive ? emergencyUnderdogs(rows, data) : {};
+  return rows.map((row) => {
+    const score = scorePicksDetailed(row.picks, data, {
+      emergencyEligible: eligible.has(row.key),
+      emergencyUnderdogs: underdogs
+    });
+    return { ...row.base, ...score.total, picks: sanitizePicks(row.picks), matchBreakdown: score.matches };
+  });
+}
+
 async function main() {
   const data = readData();
 
   if (!sheetCsv) {
-    data.leaderboard = (data.leaderboard || []).map((row) => {
-      if (!row.picks) return row;
-      const score = scorePicksDetailed(row.picks, data);
-      return { ...row, ...score.total, picks: sanitizePicks(row.picks), matchBreakdown: score.matches };
-    });
+    const rows = (data.leaderboard || []).filter((row) => row.picks).map((row) => ({
+      key: row.id || row.bracketName,
+      base: row,
+      picks: sanitizePicks(row.picks)
+    }));
+    const scored = scoreRows(rows, data);
+    let scoredIndex = 0;
+    data.leaderboard = (data.leaderboard || []).map((row) => row.picks ? scored[scoredIndex++] : row);
     data.leaderboardUpdated = timestamp();
     writeData(data);
     console.log("Recalculated existing leaderboard rows; QBIOWC_SHEET_CSV is not set.");
@@ -350,37 +432,39 @@ async function main() {
     .filter((row) => !removedBracketNames.has(row.bracketName))
     .filter((row) => !formBracketNames.has(row.bracketName))
     .filter((row) => !fakePicks[row.bracketName]);
-  const fakeSeeded = Object.values(fakePicks)
+  const rowsToScore = [
+    ...existingSeeded.map((row) => ({
+      key: row.id || row.bracketName,
+      base: row,
+      picks: sanitizePicks(row.picks || {})
+    })),
+    ...Object.values(fakePicks)
     .filter((picks) => !formBracketNames.has(picks.bracketName))
-    .map((picks) => {
-      const score = scorePicksDetailed(picks, data);
-      return {
+    .map((picks) => ({
+      key: picks.bracketName,
+      base: {
         id: picks.bracketName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
         bracketName: picks.bracketName,
-        boostCountry: picks.boostCountry,
-        ...score.total,
-        picks: sanitizePicks(picks),
-        matchBreakdown: score.matches
-      };
-    });
-
-  data.leaderboard = [
-    ...existingSeeded,
-    ...fakeSeeded,
+        boostCountry: picks.boostCountry
+      },
+      picks: sanitizePicks(picks)
+    })),
     ...[...latestByEmail.values()].map((row) => {
       const picks = parsePicks(row);
       picks.boostCountry ||= row["boost country"] || "";
-      const score = scorePicksDetailed(picks, data);
       return {
-        id: (row["bracket name"] || row.name || "Unnamed bracket").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
-        bracketName: row["bracket name"] || row.name || "Unnamed bracket",
-        boostCountry: picks.boostCountry,
-        ...score.total,
-        picks: sanitizePicks(picks),
-        matchBreakdown: score.matches
+        key: row.email,
+        base: {
+          id: (row["bracket name"] || row.name || "Unnamed bracket").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+          bracketName: row["bracket name"] || row.name || "Unnamed bracket",
+          boostCountry: picks.boostCountry
+        },
+        picks: sanitizePicks(picks)
       };
     })
-  ].sort((a, b) => a.bracketName.localeCompare(b.bracketName));
+  ];
+
+  data.leaderboard = scoreRows(rowsToScore, data).sort((a, b) => a.bracketName.localeCompare(b.bracketName));
   data.leaderboardUpdated = timestamp();
 
   writeData(data);

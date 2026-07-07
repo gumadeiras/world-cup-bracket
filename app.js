@@ -57,6 +57,8 @@ const visualMatchOrder = {
   quarterfinals: [97, 98, 99, 100],
   semifinals: [101, 102]
 };
+const quarterfinalIds = new Set(["97", "98", "99", "100"]);
+const roundOf16Ids = ["89", "90", "91", "92", "93", "94", "95", "96"];
 
 const thirdPlaceSlotMatches = [79, 85, 81, 74, 82, 77, 87, 80];
 const thirdPlaceOptions = "EJIFHGLK HGIDJFLK EJIDHGLK EJIDHFLK EGIDJFLK EGJDHFLK EGIDHFLK EGJDHFLI EGJDHFIK HGICJFLK EJICHGLK EJICHFLK EGICJFLK EGJCHFLK EGICHFLK EGJCHFLI EGJCHFIK HGICJDLK CJIDHFLK CGIDJFLK CGJDHFLK CGIDHFLK CGJDHFLI CGJDHFIK EJICHDLK EGICJDLK EGJCHDLK EGICHDLK EGJCHDLI EGJCHDIK CJEDIFLK CJEDHFLK CEIDHFLK CJEDHFLI CJEDHFIK CGEDJFLK CGEDIFLK CGEDJFLI CGEDJFIK CGEDHFLK CGJDHFLE CGJDHFEK CGEDHFLI CGEDHFIK CGJDHFEI HJBFIGLK EJIBHGLK EJBFIHLK EJBFIGLK EJBFHGLK EGBFIHLK EJBFHGLI EJBFHGIK HJBDIGLK HJBDIFLK IGBDJFLK HGBDJFLK HGBDIFLK HGBDJFLI HGBDJFIK EJBDIHLK EJBDIGLK EJBDHGLK EGBDIHLK EJBDHGLI EJBDHGIK EJBDIFLK EJBDHFLK EIBDHFLK EJBDHFLI EJBDHFIK EGBDJFLK EGBDIFLK EGBDJFLI EGBDJFIK EGBDHFLK HGBDJFLE HGBDJFEK EGBDHFLI EGBDHFIK HGBDJFEI HJBCIGLK HJBCIFLK IGBCJFLK HGBCJFLK HGBCIFLK HGBCJFLI HGBCJFIK EJBCIHLK EJBCIGLK EJBCHGLK EGBCIHLK EJBCHGLI EJBCHGIK EJBCIFLK EJBCHFLK EIBCHFLK EJBCHFLI EJBCHFIK EGBCJFLK EGBCIFLK EGBCJFLI EGBCJFIK EGBCHFLK HGBCJFLE HGBCJFEK EGBCHFLI EGBCHFIK HGBCJFEI HJBCIDLK IGBCJDLK HGBCJDLK HGBCIDLK HGBCJDLI HGBCJDIK CJBDIFLK CJBDHFLK CIBDHFLK CJBDHFLI CJBDHFIK CGBDJFLK CGBDIFLK CGBDJFLI CGBDJFIK CGBDHFLK CGBDHFLJ HGBCJFDK CGBDHFLI CGBDHFIK HGBCJFDI EJBCIDLK EJBCHDLK EIBCHDLK EJBCHDLI EJBCHDIK EGBCJDLK EGBCIDLK EGBCJDLI EGBCJDIK EGBCHDLK HGBCJDLE HGBCJDEK EGBCHDLI EGBCHDIK HGBCJDEI CJBDEFLK CEBDIFLK CJBDEFLI CJBDEFIK CEBDHFLK CJBDHFLE CJBDHFEK CEBDHFLI CEBDHFIK CJBDHFEI CGBDEFLK CGBDJFLE CGBDJFEK CGBDEFLI CGBDEFIK CGBDJFEI CGBDHFLE CGBDHFEK HGBCJFDE CGBDHFEI HJIFAGLK EJIAHGLK EJIFAHLK EJIFAGLK EGJFAHLK EGIFAHLK EGJFAHLI EGJFAHIK HJIDAGLK HJIDAFLK IGJDAFLK HGJDAFLK HGIDAFLK HGJDAFLI HGJDAFIK EJIDAHLK EJIDAGLK EGJDAHLK EGIDAHLK EGJDAHLI EGJDAHIK EJIDAFLK HJEDAFLK HEIDAFLK HJEDAFLI HJEDAFIK EGJDAFLK EGIDAFLK EGJDAFLI EGJDAFIK HGEDAFLK HGJDAFLE HGJDAFEK HGEDAFLI HGEDAFIK HGJDAFEI HJICAGLK HJICAFLK IGJCAFLK HGJCAFLK HGICAFLK HGJCAFLI HGJCAFIK EJICAHLK EJICAGLK EGJCAHLK EGICAHLK EGJCAHLI EGJCAHIK EJICAFLK HJECAFLK HEICAFLK HJECAFLI HJECAFIK EGJCAFLK EGICAFLK EGJCAFLI EGJCAFIK HGECAFLK HGJCAFLE HGJCAFEK HGECAFLI HGECAFIK HGJCAFEI HJICADLK IGJCADLK HGJCADLK HGICADLK HGJCADLI HGJCADIK CJIDAFLK HJFCADLK HFICADLK HJFCADLI HJFCADIK CGJDAFLK CGIDAFLK CGJDAFLI CGJDAFIK HGFCADLK CGJDAFLH HGJCAFDK HGFCADLI HGFCADIK HGJCAFDI EJICADLK HJECADLK HEICADLK HJECADLI HJECADIK EGJCADLK EGICADLK EGJCADLI EGJCADIK HGECADLK HGJCADLE HGJCADEK HGECADLI HGECADIK HGJCADEI CJEDAFLK CEIDAFLK CJEDAFLI CJEDAFIK HEFCADLK HJFCADLE HJECAFDK HEFCADLI HEFCADIK HJECAFDI CGEDAFLK CGJDAFLE CGJDAFEK CGEDAFLI CGEDAFIK CGJDAFEI HGFCADLE HGECAFDK HGJCAFDE HGECAFDI HJBAIGLK HJBAIFLK IJBFAGLK HJBFAGLK HGBAIFLK HJBFAGLI HJBFAGIK EJBAIHLK EJBAIGLK EJBAHGLK EGBAIHLK EJBAHGLI EJBAHGIK EJBAIFLK EJBFAHLK EIBFAHLK EJBFAHLI EJBFAHIK EJBFAGLK EGBAIFLK EJBFAGLI EJBFAGIK EGBFAHLK HJBFAGLE HJBFAGEK EGBFAHLI EGBFAHIK HJBFAGEI IJBDAHLK IJBDAGLK HJBDAGLK IGBDAHLK HJBDAGLI HJBDAGIK IJBDAFLK HJBDAFLK HIBDAFLK HJBDAFLI HJBDAFIK FJBDAGLK IGBDAFLK FJBDAGLI FJBDAGIK HGBDAFLK HGBDAFLJ HGBDAFJK HGBDAFLI HGBDAFIK HGBDAFIJ EJBAIDLK EJBDAHLK EIBDAHLK EJBDAHLI EJBDAHIK EJBDAGLK EGBAIDLK EJBDAGLI EJBDAGIK EGBDAHLK HJBDAGLE HJBDAGEK EGBDAHLI EGBDAHIK HJBDAGEI EJBDAFLK EIBDAFLK EJBDAFLI EJBDAFIK HEBDAFLK HJBDAFLE HJBDAFEK HEBDAFLI HEBDAFIK HJBDAFEI EGBDAFLK EGBDAFLJ EGBDAFJK EGBDAFLI EGBDAFIK EGBDAFIJ HGBDAFLE HGBDAFEK HGBDAFEJ HGBDAFEI IJBCAHLK IJBCAGLK HJBCAGLK IGBCAHLK HJBCAGLI HJBCAGIK IJBCAFLK HJBCAFLK HIBCAFLK HJBCAFLI HJBCAFIK CJBFAGLK IGBCAFLK CJBFAGLI CJBFAGIK HGBCAFLK HGBCAFLJ HGBCAFJK HGBCAFLI HGBCAFIK HGBCAFIJ EJBAICLK EJBCAHLK EIBCAHLK EJBCAHLI EJBCAHIK EJBCAGLK EGBAICLK EJBCAGLI EJBCAGIK EGBCAHLK HJBCAGLE HJBCAGEK EGBCAHLI EGBCAHIK HJBCAGEI EJBCAFLK EIBCAFLK EJBCAFLI EJBCAFIK HEBCAFLK HJBCAFLE HJBCAFEK HEBCAFLI HEBCAFIK HJBCAFEI EGBCAFLK EGBCAFLJ EGBCAFJK EGBCAFLI EGBCAFIK EGBCAFIJ HGBCAFLE HGBCAFEK HGBCAFEJ HGBCAFEI IJBCADLK HJBCADLK HIBCADLK HJBCADLI HJBCADIK CJBDAGLK IGBCADLK CJBDAGLI CJBDAGIK HGBCADLK HGBCADLJ HGBCADJK HGBCADLI HGBCADIK HGBCADIJ CJBDAFLK CIBDAFLK CJBDAFLI CJBDAFIK HFBCADLK CJBDAFLH HJBCAFDK HFBCADLI HFBCADIK HJBCAFDI CGBDAFLK CGBDAFLJ CGBDAFJK CGBDAFLI CGBDAFIK CGBDAFIJ CGBDAFLH HGBCAFDK HGBCAFDJ HGBCAFDI EJBCADLK EIBCADLK EJBCADLI EJBCADIK HEBCADLK HJBCADLE HJBCADEK HEBCADLI HEBCADIK HJBCADEI EGBCADLK EGBCADLJ EGBCADJK EGBCADLI EGBCADIK EGBCADIJ HGBCADLE HGBCADEK HGBCADEJ HGBCADEI CEBDAFLK CJBDAFLE CJBDAFEK CEBDAFLI CEBDAFIK CJBDAFEI HFBCADLE HEBCAFDK HJBCAFDE HEBCAFDI CGBDAFLE CGBDAFEK CGBDAFEJ CGBDAFEI HGBCAFDE".split(" ").reduce((options, row) => {
@@ -138,6 +140,10 @@ const groupStatCrimesUpdatedEl = document.querySelector("[data-group-stat-crimes
 const entryDetailEl = document.querySelector("[data-entry-detail]");
 const todayMatchesEl = document.querySelector("[data-today-matches]");
 const nextMatchesEl = document.querySelector("[data-next-matches]");
+const fundingPanelEl = document.querySelector("[data-funding-panel]");
+const fundingRuleEls = document.querySelectorAll("[data-funding-rule]");
+const fundingMatchEl = document.querySelector("[data-funding-match]");
+const fundingTeamEl = document.querySelector("[data-funding-team]");
 const tickerTrack = document.querySelector("[data-ticker-track]");
 const board = document.querySelector("[data-board]");
 const slotLegendEl = document.querySelector(".slot-legend");
@@ -273,6 +279,12 @@ function trimScorers(match, side) {
 
 function sanitizePicks(picks) {
   picks.matches ||= {};
+  const fundingId = String(picks.emergencyFunding?.matchId || "");
+  if (quarterfinalIds.has(fundingId)) {
+    picks.emergencyFunding = { matchId: fundingId, team: picks.emergencyFunding?.team || "" };
+  } else {
+    delete picks.emergencyFunding;
+  }
   Object.values(picks.matches).forEach((match) => {
     trimScorers(match, "home");
     trimScorers(match, "away");
@@ -285,6 +297,13 @@ function save() {
   state.bracketName = document.querySelector("[data-bracket-name]").value.trim();
   state.email = document.querySelector("[data-player-email]").value.trim();
   state.boostCountry = document.querySelector("[data-boost-country]").value;
+  const fundingMatch = fundingMatchEl?.value || "";
+  const fundingTeam = fundingTeamEl?.value || "";
+  if (emergencyFundingLive() && fundingMatch) {
+    state.emergencyFunding = { matchId: fundingMatch, team: fundingTeam };
+  } else {
+    delete state.emergencyFunding;
+  }
   delete state.country;
   sanitizePicks(state);
   localStorage.setItem(stateKey, JSON.stringify(state));
@@ -572,7 +591,8 @@ function scoreLine(row, id) {
   const chips = [
     score.exact ? ["exact", "exact"] : score.result ? ["result", "winner"] : ["miss", "score miss"],
     score.scorers ? ["scorers", `${score.scorers} scorer${score.scorers === 1 ? "" : "s"}`] : null,
-    score.multiplier === 2 ? ["boost", "2x"] : null
+    score.multiplier === 2 ? ["boost", "2x"] : null,
+    score.emergencyFunding ? ["funding", `funding${score.emergencyBonus ? ` +${score.emergencyBonus}` : " 3x"}`] : null
   ].filter(Boolean);
   return `<span class="entry-points">+${score.points}</span><small class="entry-score-chips">${chips.map(([kind, text]) => `<em class="${kind}">${escapeHtml(text)}</em>`).join("")}</small>`;
 }
@@ -1296,6 +1316,7 @@ function renderAffected(id) {
     document.querySelectorAll(`[data-match-id="${matchId}"]`).forEach(bindMatchControls);
   });
   board.querySelector(".champion")?.replaceWith(htmlToElement(renderChampion()));
+  renderEmergencyFunding();
   layoutBracketCards();
   drawBracketLines();
 }
@@ -1417,6 +1438,7 @@ function updateScrollHint() {
 
 function render() {
   renderMatchFeed();
+  renderEmergencyFunding();
   if (slotLegendEl) slotLegendEl.hidden = !hasProjectedRoundOf32Slot();
   board.innerHTML = rounds.map((round) => `
     <section class="round">
@@ -1542,7 +1564,7 @@ function validateRestoreInput(restored) {
 }
 
 function restoreErrorMessage(error) {
-  return `Restore failed: ${error.message}. Paste this to your agent: output one valid restore response for ${publicUrl}. It must include name, bracketName, email, boostCountry, and a matches object keyed by match numbers 73-104.`;
+  return `Restore failed: ${error.message}. Paste this to your agent: output one valid restore response for ${publicUrl}. It must include name, bracketName, email, boostCountry, emergencyFunding, and a matches object keyed by match numbers 73-104.`;
 }
 
 function randomItem(items) {
@@ -1595,7 +1617,20 @@ function randomizePicks() {
     if (homeScore === awayScore) state.matches[id].advance = Math.random() < 0.5 ? "home" : "away";
   });
   state.boostCountry = randomItem(boostOptions);
+  const fundingOptions = emergencyFundingLive() ? quarterfinalMatches()
+    .map(([id]) => {
+      const teams = fundingTeamsForMatch(id);
+      return teams.length ? { matchId: String(id), teams } : null;
+    })
+    .filter(Boolean) : [];
+  if (fundingOptions.length) {
+    const funded = randomItem(fundingOptions);
+    state.emergencyFunding = { matchId: funded.matchId, team: randomItem(funded.teams) };
+  } else {
+    delete state.emergencyFunding;
+  }
   document.querySelector("[data-boost-country]").value = state.boostCountry || "";
+  renderEmergencyFunding();
   document.querySelector("[data-randomize]").textContent = nextRandomizeLabel();
   save();
   render();
@@ -1615,6 +1650,7 @@ function restoreTemplate() {
     bracketName: "",
     email: "",
     boostCountry: "",
+    emergencyFunding: { matchId: "", team: "" },
     matches: Object.fromEntries(rounds.flatMap((round) => round.matches).map(([id]) => [
       String(id),
       { home: null, away: null, advance: "", homeScorers: [], awayScorers: [] }
@@ -1648,6 +1684,7 @@ Rules:
 - If a match is tied, set advance to "home" or "away"; otherwise set advance to "".
 - homeScorers and awayScorers can be empty arrays, or exact player names if you are confident.
 - Pick one boostCountry from a team in the knockout bracket.
+${emergencyFundingLive() ? "- Pick one emergencyFunding object with a quarterfinal matchId and one team from that match." : ""}
 - Keep the interview playful. Lightly roast the choices and the user, but keep it friendly.
 - Before the final restore data, tell me: "copy this response, open restore on the page (${publicUrl}), paste it, and click restore."
 - Then output the restore data as valid JSON. No markdown. No explanation.
@@ -1676,7 +1713,52 @@ function renderBoostCountries() {
     .join("")}`;
 }
 
+function quarterfinalMatches() {
+  return rounds.find((round) => round.name === "quarterfinals")?.matches || [];
+}
+
+function emergencyFundingLive() {
+  return roundOf16Ids.every((id) => matchResults[id]?.winnerSide);
+}
+
+function fundingTeamsForMatch(id) {
+  const [home, away] = teams(id).map((slot) => slotInfo(slot).main);
+  return [home, away].filter((team) => team && team !== "TBD" && !/^[WL]\d+$/.test(team));
+}
+
+function renderEmergencyFunding() {
+  if (!fundingMatchEl || !fundingTeamEl) return;
+  if (!emergencyFundingLive()) {
+    delete state.emergencyFunding;
+    if (fundingPanelEl) fundingPanelEl.hidden = true;
+    fundingRuleEls.forEach((rule) => rule.hidden = true);
+    fundingMatchEl.innerHTML = `<option value="">pick one</option>`;
+    fundingTeamEl.innerHTML = `<option value="">pick team</option>`;
+    fundingTeamEl.disabled = true;
+    return;
+  }
+  if (fundingPanelEl) fundingPanelEl.hidden = false;
+  fundingRuleEls.forEach((rule) => rule.hidden = false);
+  const selectedMatch = quarterfinalIds.has(String(state.emergencyFunding?.matchId)) ? String(state.emergencyFunding.matchId) : "";
+  const matches = quarterfinalMatches();
+  fundingMatchEl.innerHTML = `<option value="">pick one</option>${matches.map(([id]) => {
+    const names = fundingTeamsForMatch(id);
+    const label = names.length === 2 ? `${names[0]} vs ${names[1]}` : "quarterfinal";
+    return `<option value="${id}">${escapeHtml(label)}</option>`;
+  }).join("")}`;
+  fundingMatchEl.value = selectedMatch;
+
+  const teamsForSelected = selectedMatch ? fundingTeamsForMatch(selectedMatch) : [];
+  const selectedTeam = teamsForSelected.includes(state.emergencyFunding?.team) ? state.emergencyFunding.team : "";
+  fundingTeamEl.innerHTML = `<option value="">pick team</option>${teamsForSelected
+    .map((team) => `<option value="${escapeAttribute(team)}">${escapeHtml(team)}</option>`)
+    .join("")}`;
+  fundingTeamEl.value = selectedTeam;
+  fundingTeamEl.disabled = !selectedMatch || !teamsForSelected.length;
+}
+
 renderBoostCountries();
+renderEmergencyFunding();
 document.querySelector("[data-player-name]").value = state.name || "";
 document.querySelector("[data-bracket-name]").value = state.bracketName || "";
 document.querySelector("[data-player-email]").value = state.email || "";
@@ -1686,6 +1768,13 @@ document.querySelectorAll("[data-player-name], [data-bracket-name], [data-player
   input.addEventListener("change", save);
 });
 document.querySelector("[data-boost-country]").addEventListener("change", render);
+fundingMatchEl?.addEventListener("change", () => {
+  const teamsForSelected = fundingTeamsForMatch(fundingMatchEl.value);
+  state.emergencyFunding = { matchId: fundingMatchEl.value, team: teamsForSelected.includes(state.emergencyFunding?.team) ? state.emergencyFunding.team : "" };
+  renderEmergencyFunding();
+  save();
+});
+fundingTeamEl?.addEventListener("change", save);
 document.querySelector("[data-copy]").addEventListener("click", async () => {
   save();
   await copyPicks();

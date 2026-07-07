@@ -275,6 +275,38 @@
       font-size: var(--type-sm);
     }
 
+    .funding-panel {
+      grid-template-columns: minmax(0, 1.2fr) minmax(210px, 0.7fr) minmax(190px, 0.6fr);
+      align-items: end;
+      border-color: var(--gold);
+      background:
+        linear-gradient(90deg, rgba(200, 147, 43, 0.2), rgba(176, 8, 47, 0.08)),
+        rgba(255, 250, 240, 0.86);
+    }
+
+    .funding-panel h2 {
+      margin: 0 0 5px;
+      color: var(--red);
+      font-size: var(--type-lg);
+      text-transform: uppercase;
+    }
+
+    .funding-panel p {
+      margin: 0;
+      color: var(--muted);
+      font-size: var(--type-sm);
+      line-height: 1.35;
+    }
+
+    .funding-note {
+      grid-column: 1 / -1;
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+      color: var(--red) !important;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
     .quickstart {
       grid-template-columns: repeat(4, 1fr);
       align-items: stretch;
@@ -833,6 +865,11 @@
     .entry-score-chips .boost {
       border-color: var(--gold);
       color: var(--gold);
+    }
+
+    .entry-score-chips .funding {
+      border-color: var(--red);
+      color: var(--red);
     }
 
     .entry-score-chips .miss {
@@ -1958,7 +1995,8 @@
     @media (max-width: 860px) {
       .shell { padding: 16px; }
       .topbar,
-      .panel {
+      .panel,
+      .funding-panel {
         grid-template-columns: 1fr;
       }
       .actions {
@@ -2060,6 +2098,22 @@
       <button class="secondary" type="button" data-agent-prompt>copy agent prompt</button>
     </section>
 
+    <section class="panel funding-panel" aria-label="emergency funding round" data-funding-panel hidden>
+      <div>
+        <h2>emergency funding round</h2>
+        <p>Lower half after Round of 16? You get one bailout. Choose one quarterfinal game and one funded team.</p>
+      </div>
+      <label>
+        funded game
+        <select class="field" data-funding-match></select>
+      </label>
+      <label>
+        funded team
+        <select class="field" data-funding-team></select>
+      </label>
+      <p class="funding-note">3x points. +2 exact score. +2 funded team wins on penalties. +3 funded team is the QBio underdog and wins. One award per bracket. No-cost extensions denied.</p>
+    </section>
+
     <section class="match-feed" aria-label="upcoming knockout matches">
       <div class="match-feed__section">
         <h2>happening today</h2>
@@ -2121,6 +2175,8 @@
               <li><b>Boost country:</b> pick one country. Games involving that country count double.</li>
               <li><b>Boost applies to the whole match:</b> exact score, result, and scorer points.</li>
               <li><b>If your boost country is eliminated, the boost is done too.</b></li>
+              <li data-funding-rule hidden><b>Emergency Funding Round:</b> lower half after Round of 16 can fund one quarterfinal. That match counts 3x.</li>
+              <li data-funding-rule hidden><b>Emergency bonuses:</b> +2 exact score, +2 funded team wins on penalties, +3 funded team is the QBio underdog and wins.</li>
               <li><b>Knockout draws:</b> if your score is tied, choose who advances.</li>
               <li><b>Leaderboard:</b> total points first; exact scores are the first tiebreaker, then scorer points.</li>
             </ul>
