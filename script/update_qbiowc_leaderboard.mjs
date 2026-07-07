@@ -240,18 +240,20 @@ export function scorePicksDetailed(picks, data, options = {}) {
       countScorers(pick.homeScorers, actual.homeScorers) +
       countScorers(pick.awayScorers, actual.awayScorers)
     );
-    const multiplier = [actual.home, actual.away].includes(picks.boostCountry) ? 2 : 1;
-    const basePoints = ((exact ? 3 : result ? 1 : 0) + scorers) * multiplier;
+    const rawPoints = (exact ? 3 : result ? 1 : 0) + scorers;
+    const boostMultiplier = [actual.home, actual.away].includes(picks.boostCountry) ? 2 : 1;
     const rescue = picks.emergencyFunding || {};
     const winnerName = actual.winnerSide === "home" ? actual.home : actual.winnerSide === "away" ? actual.away : "";
     const rescueActive = options.emergencyEligible && rescue.matchId === id && quarterfinalIds.has(id);
+    const multiplier = rescueActive && !options.emergencyBoostStacks ? 1 : boostMultiplier;
+    const basePoints = rawPoints * multiplier;
     const rescueTeamWon = rescueActive && rescue.team && rescue.team === winnerName;
     const rescueBonus = rescueActive
       ? (exact ? 2 : 0) +
         (rescueTeamWon && Number.isFinite(actual.homeShootoutScore) && Number.isFinite(actual.awayShootoutScore) ? 2 : 0) +
         (rescueTeamWon && options.emergencyUnderdogs?.[id] === rescue.team ? 3 : 0)
       : 0;
-    const points = (rescueActive ? basePoints * 3 : basePoints) + rescueBonus;
+    const points = (rescueActive ? basePoints * 2 : basePoints) + rescueBonus;
 
     total.exact += exact ? 1 : 0;
     total.result += result ? 1 : 0;
@@ -264,7 +266,7 @@ export function scorePicksDetailed(picks, data, options = {}) {
       result: result ? 1 : 0,
       scorers,
       multiplier,
-      ...(rescueActive ? { emergencyFunding: 1, emergencyBonus: rescueBonus } : {})
+      ...(rescueActive ? { emergencyFunding: 1, emergencyBonus: rescueBonus, emergencyMultiplier: 2 } : {})
     });
   }
   return { total, matches };
@@ -335,11 +337,11 @@ function preQuarterfinalScore(row) {
   return { ...row, ...score.total, bracketName: row.base.bracketName || "" };
 }
 
-function emergencyEligibleKeys(rows) {
-  const ranked = rows.map(preQuarterfinalScore).sort((a, b) =>
-    b.points - a.points || b.exact - a.exact || b.scorers - a.scorers || a.bracketName.localeCompare(b.bracketName)
-  );
-  return new Set(ranked.slice(Math.ceil(ranked.length / 2)).map((row) => row.key));
+function emergencyTiers(rows) {
+  return new Map(rows.map(preQuarterfinalScore).map((row) => [
+    row.key,
+    row.points >= 33 ? null : { boostStacks: row.points <= 24 }
+  ]));
 }
 
 function winnerSide(pick) {
@@ -380,11 +382,13 @@ function emergencyFundingLive(data) {
 
 export function scoreRows(rows, data) {
   const fundingLive = emergencyFundingLive(data);
-  const eligible = fundingLive ? emergencyEligibleKeys(rows.map((row) => ({ ...row, data }))) : new Set();
+  const tiers = fundingLive ? emergencyTiers(rows.map((row) => ({ ...row, data }))) : new Map();
   const underdogs = fundingLive ? emergencyUnderdogs(rows, data) : {};
   return rows.map((row) => {
+    const tier = tiers.get(row.key);
     const score = scorePicksDetailed(row.picks, data, {
-      emergencyEligible: eligible.has(row.key),
+      emergencyEligible: Boolean(tier),
+      emergencyBoostStacks: Boolean(tier?.boostStacks),
       emergencyUnderdogs: underdogs
     });
     return { ...row.base, ...score.total, picks: sanitizePicks(row.picks), matchBreakdown: score.matches };

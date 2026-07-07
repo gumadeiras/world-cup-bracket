@@ -41,6 +41,9 @@ jobs:
           git rm .github/workflows/update-scores.yml
           git commit -m "Remove expired QBio score updater"
           git push
+      - name: Validate scoring
+        if: steps.window.outputs.run == 'true'
+        run: node script/check_qbiowc_scoring.mjs
       - name: Update scores and leaderboard
         if: steps.window.outputs.run == 'true'
         env:

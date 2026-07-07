@@ -592,7 +592,7 @@ function scoreLine(row, id) {
     score.exact ? ["exact", "exact"] : score.result ? ["result", "winner"] : ["miss", "score miss"],
     score.scorers ? ["scorers", `${score.scorers} scorer${score.scorers === 1 ? "" : "s"}`] : null,
     score.multiplier === 2 ? ["boost", "2x"] : null,
-    score.emergencyFunding ? ["funding", `funding${score.emergencyBonus ? ` +${score.emergencyBonus}` : " 3x"}`] : null
+    score.emergencyFunding ? ["funding", `funding${score.emergencyBonus ? ` +${score.emergencyBonus}` : " 2x"}`] : null
   ].filter(Boolean);
   return `<span class="entry-points">+${score.points}</span><small class="entry-score-chips">${chips.map(([kind, text]) => `<em class="${kind}">${escapeHtml(text)}</em>`).join("")}</small>`;
 }
@@ -1684,7 +1684,7 @@ Rules:
 - If a match is tied, set advance to "home" or "away"; otherwise set advance to "".
 - homeScorers and awayScorers can be empty arrays, or exact player names if you are confident.
 - Pick one boostCountry from a team in the knockout bracket.
-${emergencyFundingLive() ? "- Pick one emergencyFunding object with a quarterfinal matchId and one team from that match." : ""}
+${emergencyFundingLive() ? "- Pick one emergencyFunding object with a quarterfinal matchId and one team from that match if you have fewer than 33 points." : ""}
 - Keep the interview playful. Lightly roast the choices and the user, but keep it friendly.
 - Before the final restore data, tell me: "copy this response, open restore on the page (${publicUrl}), paste it, and click restore."
 - Then output the restore data as valid JSON. No markdown. No explanation.

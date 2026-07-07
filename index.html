@@ -2101,7 +2101,7 @@
     <section class="panel funding-panel" aria-label="emergency funding round" data-funding-panel hidden>
       <div>
         <h2>emergency funding round</h2>
-        <p>Lower half after Round of 16? You get one bailout. Choose one quarterfinal game and one funded team.</p>
+        <p>Under 33 points after Round of 16? You get one bailout. Choose one quarterfinal game and one funded team.</p>
       </div>
       <label>
         funded game
@@ -2111,7 +2111,7 @@
         funded team
         <select class="field" data-funding-team></select>
       </label>
-      <p class="funding-note">3x points. +2 exact score. +2 funded team wins on penalties. +3 funded team is the QBio underdog and wins. One award per bracket. No-cost extensions denied.</p>
+      <p class="funding-note">2x points. 25-32 pts: boost does not stack. 0-24 pts: full bailout, boost can stack. +2 exact score. +2 funded team wins on penalties. +3 funded team is the QBio underdog and wins. No-cost extensions denied.</p>
     </section>
 
     <section class="match-feed" aria-label="upcoming knockout matches">
@@ -2175,7 +2175,8 @@
               <li><b>Boost country:</b> pick one country. Games involving that country count double.</li>
               <li><b>Boost applies to the whole match:</b> exact score, result, and scorer points.</li>
               <li><b>If your boost country is eliminated, the boost is done too.</b></li>
-              <li data-funding-rule hidden><b>Emergency Funding Round:</b> lower half after Round of 16 can fund one quarterfinal. That match counts 3x.</li>
+              <li data-funding-rule hidden><b>Emergency Funding Round:</b> under 33 points after Round of 16 can fund one quarterfinal. That match counts 2x.</li>
+              <li data-funding-rule hidden><b>Emergency tiers:</b> 25-32 points get no boost stacking. 0-24 points get full bailout mode, so boost can stack.</li>
               <li data-funding-rule hidden><b>Emergency bonuses:</b> +2 exact score, +2 funded team wins on penalties, +3 funded team is the QBio underdog and wins.</li>
               <li><b>Knockout draws:</b> if your score is tied, choose who advances.</li>
               <li><b>Leaderboard:</b> total points first; exact scores are the first tiebreaker, then scorer points.</li>

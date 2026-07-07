@@ -66,9 +66,20 @@ const fundingScore = scorePicksDetailed(fundingPicks, fundingData, {
   emergencyEligible: true,
   emergencyUnderdogs: { 97: "A" }
 });
-assert.deepEqual(fundingScore.total, { points: 17, exact: 1, result: 0, scorers: 1 });
+assert.deepEqual(fundingScore.total, { points: 13, exact: 1, result: 0, scorers: 1 });
 assert.deepEqual(fundingScore.matches[0].emergencyFunding, 1);
 assert.deepEqual(fundingScore.matches[0].emergencyBonus, 5);
+
+assert.deepEqual(scorePicksDetailed({ ...fundingPicks, boostCountry: "A" }, fundingData, {
+  emergencyEligible: true,
+  emergencyBoostStacks: false,
+  emergencyUnderdogs: { 97: "A" }
+}).total, { points: 13, exact: 1, result: 0, scorers: 1 });
+assert.deepEqual(scorePicksDetailed({ ...fundingPicks, boostCountry: "A" }, fundingData, {
+  emergencyEligible: true,
+  emergencyBoostStacks: true,
+  emergencyUnderdogs: { 97: "A" }
+}).total, { points: 21, exact: 1, result: 0, scorers: 1 });
 
 const rowsForFunding = [
   { key: "a", base: { bracketName: "a leader" }, picks: { matches: {} } },
@@ -78,7 +89,64 @@ const rowsForFunding = [
 const gatedFundingData = structuredClone(fundingData);
 delete gatedFundingData.matchResults[96];
 assert.equal(scoreRows(rowsForFunding, gatedFundingData).find((row) => row.bracketName === "z funding").points, 4);
-assert.equal(scoreRows(rowsForFunding, fundingData).find((row) => row.bracketName === "z funding").points, 14);
+assert.equal(scoreRows(rowsForFunding, fundingData).find((row) => row.bracketName === "z funding").points, 10);
+
+const tierData = structuredClone(fundingData);
+const priorIds = Array.from({ length: 9 }, (_, index) => String(73 + index));
+for (const id of priorIds) {
+  tierData.matchResults[id] = {
+    date: "2026-06-28T19:00Z",
+    home: `H${id}`,
+    away: `A${id}`,
+    homeScore: 1,
+    awayScore: 0,
+    winnerSide: "home",
+    homeScorers: [`s${id}`],
+    awayScorers: []
+  };
+}
+
+function fundedTierRow(key, bracketName, priorCount) {
+  return {
+    key,
+    base: { bracketName },
+    picks: {
+      ...fundingPicks,
+      boostCountry: "A",
+      matches: {
+        ...Object.fromEntries(priorIds.slice(0, priorCount).map((id) => [id, {
+          home: 1,
+          away: 0,
+          homeScorers: [`s${id}`],
+          awayScorers: []
+        }])),
+        ...fundingPicks.matches
+      }
+    }
+  };
+}
+
+const tierScores = scoreRows([
+  fundedTierRow("top", "top bracket", 9),
+  fundedTierRow("middle", "middle bracket", 7),
+  fundedTierRow("bottom", "bottom bracket", 5)
+], tierData);
+const top = tierScores.find((row) => row.bracketName === "top bracket");
+const middle = tierScores.find((row) => row.bracketName === "middle bracket");
+const bottom = tierScores.find((row) => row.bracketName === "bottom bracket");
+const match97 = (row) => row.matchBreakdown.find((match) => match.id === "97");
+
+assert.equal(top.points, 44);
+assert.equal(match97(top).points, 8);
+assert.equal(match97(top).emergencyFunding, undefined);
+assert.equal(middle.points, 38);
+assert.equal(match97(middle).points, 10);
+assert.equal(match97(middle).multiplier, 1);
+assert.equal(match97(middle).emergencyFunding, 1);
+assert.equal(bottom.points, 38);
+assert.equal(match97(bottom).points, 18);
+assert.equal(match97(bottom).multiplier, 2);
+assert.equal(match97(bottom).emergencyFunding, 1);
 
 assert.deepEqual(
   mergeCompletedPicks(
