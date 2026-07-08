@@ -1684,7 +1684,7 @@ Rules:
 - If a match is tied, set advance to "home" or "away"; otherwise set advance to "".
 - homeScorers and awayScorers can be empty arrays, or exact player names if you are confident.
 - Pick one boostCountry from a team in the knockout bracket.
-${emergencyFundingLive() ? "- Pick one emergencyFunding object with a quarterfinal matchId and one team from that match if you have fewer than 33 points." : ""}
+${emergencyFundingLive() ? "- Pick one emergencyFunding object with a quarterfinal matchId and one team from that match if your Round of 16 leaderboard score is 33 or lower." : ""}
 - Keep the interview playful. Lightly roast the choices and the user, but keep it friendly.
 - Before the final restore data, tell me: "copy this response, open restore on the page (${publicUrl}), paste it, and click restore."
 - Then output the restore data as valid JSON. No markdown. No explanation.

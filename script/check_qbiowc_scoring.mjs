@@ -126,12 +126,17 @@ function fundedTierRow(key, bracketName, priorCount) {
   };
 }
 
+const edgeRow = fundedTierRow("edge", "edge bracket", 8);
+edgeRow.picks.matches[81] = { home: 2, away: 0, homeScorers: [], awayScorers: [] };
+
 const tierScores = scoreRows([
   fundedTierRow("top", "top bracket", 9),
+  edgeRow,
   fundedTierRow("middle", "middle bracket", 7),
   fundedTierRow("bottom", "bottom bracket", 5)
 ], tierData);
 const top = tierScores.find((row) => row.bracketName === "top bracket");
+const edge = tierScores.find((row) => row.bracketName === "edge bracket");
 const middle = tierScores.find((row) => row.bracketName === "middle bracket");
 const bottom = tierScores.find((row) => row.bracketName === "bottom bracket");
 const match97 = (row) => row.matchBreakdown.find((match) => match.id === "97");
@@ -139,6 +144,10 @@ const match97 = (row) => row.matchBreakdown.find((match) => match.id === "97");
 assert.equal(top.points, 44);
 assert.equal(match97(top).points, 8);
 assert.equal(match97(top).emergencyFunding, undefined);
+assert.equal(edge.points, 43);
+assert.equal(match97(edge).points, 10);
+assert.equal(match97(edge).multiplier, 1);
+assert.equal(match97(edge).emergencyFunding, 1);
 assert.equal(middle.points, 38);
 assert.equal(match97(middle).points, 10);
 assert.equal(match97(middle).multiplier, 1);

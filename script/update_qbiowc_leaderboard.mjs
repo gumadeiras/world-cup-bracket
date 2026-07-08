@@ -340,7 +340,7 @@ function preQuarterfinalScore(row) {
 function emergencyTiers(rows) {
   return new Map(rows.map(preQuarterfinalScore).map((row) => [
     row.key,
-    row.points >= 33 ? null : { boostStacks: row.points <= 24 }
+    row.points >= 34 ? null : { boostStacks: row.points <= 24 }
   ]));
 }
 

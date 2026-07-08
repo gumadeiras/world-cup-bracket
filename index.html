@@ -301,6 +301,8 @@
     .funding-note {
       grid-column: 1 / -1;
       border-top: 1px solid var(--line);
+      display: grid;
+      gap: 5px;
       padding-top: 10px;
       color: var(--red) !important;
       font-weight: 700;
@@ -2101,7 +2103,7 @@
     <section class="panel funding-panel" aria-label="emergency funding round" data-funding-panel hidden>
       <div>
         <h2>emergency funding round</h2>
-        <p>Under 33 points after Round of 16? You get one bailout. Choose one quarterfinal game and one funded team.</p>
+        <p>Your leaderboard score after Round of 16 decides your funding tier. 34+ gets nothing. 33 or lower gets one funded quarterfinal.</p>
       </div>
       <label>
         funded game
@@ -2111,7 +2113,13 @@
         funded team
         <select class="field" data-funding-team></select>
       </label>
-      <p class="funding-note">2x points. 25-32 pts: boost does not stack. 0-24 pts: full bailout, boost can stack. +2 exact score. +2 funded team wins on penalties. +3 funded team is the QBio underdog and wins. No-cost extensions denied.</p>
+      <div class="funding-note">
+        <p>Normal points = exact score, correct result, and scorers.</p>
+        <p>25-33 leaderboard score: funded game normal points count 2x. Boost country does not stack.</p>
+        <p>0-24 leaderboard score: funded game normal points count 2x. Boost country can stack if it is playing.</p>
+        <p>Bonus points: +2 exact score. +2 funded team wins on penalties. +3 funded team is the QBio underdog and wins.</p>
+        <p>QBio underdog = fewer brackets picked that team. One funded game only. No-cost extensions denied.</p>
+      </div>
     </section>
 
     <section class="match-feed" aria-label="upcoming knockout matches">
@@ -2175,9 +2183,11 @@
               <li><b>Boost country:</b> pick one country. Games involving that country count double.</li>
               <li><b>Boost applies to the whole match:</b> exact score, result, and scorer points.</li>
               <li><b>If your boost country is eliminated, the boost is done too.</b></li>
-              <li data-funding-rule hidden><b>Emergency Funding Round:</b> under 33 points after Round of 16 can fund one quarterfinal. That match counts 2x.</li>
-              <li data-funding-rule hidden><b>Emergency tiers:</b> 25-32 points get no boost stacking. 0-24 points get full bailout mode, so boost can stack.</li>
-              <li data-funding-rule hidden><b>Emergency bonuses:</b> +2 exact score, +2 funded team wins on penalties, +3 funded team is the QBio underdog and wins.</li>
+              <li data-funding-rule hidden><b>Emergency eligibility:</b> your leaderboard score after Round of 16 decides this. 34+ gets nothing. 33 or lower can fund one quarterfinal.</li>
+              <li data-funding-rule hidden><b>Emergency normal points:</b> exact score, result, and scorer points on the funded game count 2x.</li>
+              <li data-funding-rule hidden><b>Emergency tiers:</b> leaderboard score 25-33 means no boost stacking. Leaderboard score 0-24 means boost can stack.</li>
+              <li data-funding-rule hidden><b>Emergency bonus points:</b> +2 exact score, +2 funded team wins on penalties, +3 funded team is the QBio underdog and wins.</li>
+              <li data-funding-rule hidden><b>QBio underdog:</b> the team fewer brackets picked to win that game.</li>
               <li><b>Knockout draws:</b> if your score is tied, choose who advances.</li>
               <li><b>Leaderboard:</b> total points first; exact scores are the first tiebreaker, then scorer points.</li>
             </ul>
