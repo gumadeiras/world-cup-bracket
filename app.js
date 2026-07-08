@@ -135,6 +135,8 @@ const leaderboardEl = document.querySelector("[data-leaderboard]");
 const leaderboardUpdatedEl = document.querySelector("[data-leaderboard-updated]");
 const statCrimesEl = document.querySelector("[data-stat-crimes]");
 const statCrimesUpdatedEl = document.querySelector("[data-stat-crimes-updated]");
+const r16StatCrimesEl = document.querySelector("[data-r16-stat-crimes]");
+const r16StatCrimesUpdatedEl = document.querySelector("[data-r16-stat-crimes-updated]");
 const groupStatCrimesEl = document.querySelector("[data-group-stat-crimes]");
 const groupStatCrimesUpdatedEl = document.querySelector("[data-group-stat-crimes-updated]");
 const entryDetailEl = document.querySelector("[data-entry-detail]");
@@ -931,19 +933,19 @@ function boostPointRows(completed) {
 }
 
 const statRules = {
-  cooked: "Completed round-of-32 game where QBio's most-picked winner was wrong.",
+  cooked: "Completed game in this round where QBio's most-picked winner was wrong.",
   possession: "Completed games where the losing team had more possession. Biggest possession gap wins.",
   shots: "Completed games where the losing team had more total shots. Biggest shot gap wins.",
-  model: "Completed round-of-32 game where QBio's most-picked winner differs from the ESPN odds favorite.",
+  model: "Completed game in this round where QBio's most-picked winner differs from the ESPN odds favorite.",
   character: "Team with the highest card score. Red cards count triple, then yellow cards, then fouls break ties.",
   crosses: "Team with the most crosses. Teams that lost get priority because that is funnier.",
   scoreline: "Most common scoreline picked by QBio brackets for this round.",
   coward: "Counts low-score picks in this round: 1-0, 0-1, and 1-1.",
   sicko: "Counts tied-score predictions in this round.",
-  boost: "Only boost countries that already played completed round-of-32 games are eligible.",
-  pichichi: "Counts scorer picks in completed round-of-32 games, then compares them to scorer hits.",
-  deterministic: "Most exact scores from completed round-of-32 games.",
-  bus: "Points earned from completed 1-0, 0-1, and 1-1 round-of-32 picks.",
+  boost: "Only boost countries that already played completed games in this round are eligible.",
+  pichichi: "Counts scorer picks in completed games in this round, then compares them to scorer hits.",
+  deterministic: "Most exact scores from completed games in this round.",
+  bus: "Points earned from completed 1-0, 0-1, and 1-1 picks in this round.",
   perfect: "Group-stage teams with three wins. Goal difference breaks ties.",
   draw: "Group-stage team with the most draws.",
   goals: "Group-stage team with the most goals scored.",
@@ -988,6 +990,14 @@ function renderStatCrimes() {
     includeBracket: true,
     matchIds: r32Ids,
     title: "round of 32"
+  });
+  const r16Ids = rounds[1].matches.map(([id]) => String(id));
+  const r16Completed = completedStatMatches(matchResults, data.matchStats || {}).filter((entry) => r16Ids.includes(entry.id));
+  renderStatCrimesPanel(r16StatCrimesEl, r16StatCrimesUpdatedEl, {
+    completed: r16Completed,
+    includeBracket: true,
+    matchIds: r16Ids,
+    title: "round of 16"
   });
   renderStatCrimesPanel(groupStatCrimesEl, groupStatCrimesUpdatedEl, {
     completed: completedStatMatches(groupResults, data.groupMatchStats || {}),
