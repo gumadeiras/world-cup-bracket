@@ -1728,7 +1728,7 @@ function quarterfinalMatches() {
 }
 
 function emergencyFundingLive() {
-  return roundOf16Ids.every((id) => matchResults[id]?.winnerSide);
+  return roundOf16Ids.every((id) => matchResults[id]?.winnerSide) && Date.now() < kickoffTime(97);
 }
 
 function fundingTeamsForMatch(id) {
