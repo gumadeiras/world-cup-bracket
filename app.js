@@ -614,7 +614,8 @@ function renderEntryMatch(row, match) {
   const home = label(resolveThirdSlot(homeRaw, id));
   const away = label(resolveThirdSlot(awayRaw, id));
   const win = winner(id);
-  const boosted = row.boostCountry && [slotInfo(home).team?.n, slotInfo(away).team?.n].includes(row.boostCountry);
+  const matchBoost = row.picks?.matchBoostCountry?.[id] ?? row.boostCountry;
+  const boosted = matchBoost && [slotInfo(home).team?.n, slotInfo(away).team?.n].includes(matchBoost);
   const missed = score && !score.exact && !score.result;
   return `<article class="entry-match ${boosted ? "boosted" : ""} ${closed ? "closed" : ""} ${missed ? "missed" : ""} ${score?.exact ? "exact" : score?.result ? "result" : ""} ${score?.scorers ? "scorer-hit" : ""}">
     <div class="entry-match-head"><time>${kickoffs[id]}</time><span>${scoreLine(row, id)}</span></div>
@@ -1694,7 +1695,7 @@ Rules:
 - If a match is tied, set advance to "home" or "away"; otherwise set advance to "".
 - homeScorers and awayScorers can be empty arrays, or exact player names if you are confident.
 - Pick one boostCountry from a team in the knockout bracket.
-${emergencyFundingLive() ? "- Pick one emergencyFunding object with a quarterfinal matchId and one team from that match if your Round of 16 leaderboard score is 33 or lower." : ""}
+${emergencyFundingLive() ? "- Pick one emergencyFunding object with a quarterfinal matchId and one team from that match if your Round of 16 leaderboard score is 32 or lower." : ""}
 - Keep the interview playful. Lightly roast the choices and the user, but keep it friendly.
 - Before the final restore data, tell me: "copy this response, open restore on the page (${publicUrl}), paste it, and click restore."
 - Then output the restore data as valid JSON. No markdown. No explanation.

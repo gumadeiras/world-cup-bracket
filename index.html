@@ -2103,7 +2103,7 @@
     <section class="panel funding-panel" aria-label="emergency funding round" data-funding-panel hidden>
       <div>
         <h2>emergency funding round</h2>
-        <p>Your leaderboard score after Round of 16 decides your funding tier. 34+ gets nothing. 33 or lower gets one funded quarterfinal.</p>
+        <p>Your leaderboard score after Round of 16 decides your funding tier. 33+ gets nothing. 32 or lower gets one funded quarterfinal.</p>
       </div>
       <label>
         funded game
@@ -2115,8 +2115,8 @@
       </label>
       <div class="funding-note">
         <p>The funded game doubles the points you earn from that match: exact score, correct result, and scorer picks.</p>
-        <p>25-33 leaderboard score: funded game points count 2x. Boost country does not stack.</p>
-        <p>0-24 leaderboard score: funded game points count 2x. Boost country can stack if it is playing.</p>
+        <p>25-32 leaderboard score: funded game points count 2x. Boost country does not stack.</p>
+        <p>0-24 leaderboard score: funded game points count 2x. Boost country doubles the full funded award, including bonuses, if it is playing.</p>
         <p>Bonus points: +2 exact score. +2 funded team wins on penalties. +3 funded team is the QBio underdog and wins.</p>
         <p>QBio underdog = fewer brackets picked that team. One funded game only. No-cost extensions denied.</p>
       </div>
@@ -2190,12 +2190,13 @@
               <li><b>Correct result:</b> 1 point if you pick the right winner, or the right draw.</li>
               <li><b>Scorers:</b> 1 point for each correct scorer, max 3 per match.</li>
               <li><b>Scorer order does not matter.</b> Pick the people, not the minute.</li>
-              <li><b>Boost country:</b> pick one country. Games involving that country count double.</li>
+              <li><b>Boost country:</b> pick one country. If you switch it, the new boost applies only to games that have not started. Games already played keep the previous boost.</li>
+              <li><b>Submission grace:</b> predictions and edits remain open for 10 minutes after kickoff, unless a goal is scored first.</li>
               <li><b>Boost applies to the whole match:</b> exact score, result, and scorer points.</li>
               <li><b>If your boost country is eliminated, the boost is done too.</b></li>
-              <li data-funding-rule hidden><b>Emergency eligibility:</b> your leaderboard score after Round of 16 decides this. 34+ gets nothing. 33 or lower can fund one quarterfinal.</li>
+              <li data-funding-rule hidden><b>Emergency eligibility:</b> your leaderboard score after Round of 16 decides this. 33+ gets nothing. 32 or lower can fund one quarterfinal.</li>
               <li data-funding-rule hidden><b>Emergency funded game:</b> exact score, result, and scorer points on the funded game count 2x.</li>
-              <li data-funding-rule hidden><b>Emergency tiers:</b> leaderboard score 25-33 means no boost stacking. Leaderboard score 0-24 means boost can stack.</li>
+              <li data-funding-rule hidden><b>Emergency tiers:</b> leaderboard score 25-32 means no boost stacking. Leaderboard score 0-24 means boost doubles the full funded award, including bonuses.</li>
               <li data-funding-rule hidden><b>Emergency bonus points:</b> +2 exact score, +2 funded team wins on penalties, +3 funded team is the QBio underdog and wins.</li>
               <li data-funding-rule hidden><b>QBio underdog:</b> the team fewer brackets picked to win that game.</li>
               <li><b>Knockout draws:</b> if your score is tied, choose who advances.</li>

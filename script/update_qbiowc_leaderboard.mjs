@@ -12,6 +12,16 @@ const firstRoundIds = new Set(Array.from({ length: 16 }, (_, index) => String(in
 const roundOf16Ids = ["89", "90", "91", "92", "93", "94", "95", "96"];
 const quarterfinalIds = new Set(["97", "98", "99", "100"]);
 const rescueCutoffId = 97;
+const submissionGraceMs = 10 * 60 * 1000;
+const firstSubmissionExceptions = new Map([
+  ["Dmel football", new Set(["76"])],
+  ["footballers", new Set(["74"])],
+  ["Tm6b", new Set(["74"])]
+]);
+const publishedBoostOverrides = new Map([
+  ["ComeOnEngland", new Map([["77", "France"]])],
+  ["+ Swiss Neutrality On Top", new Map([["84", "Spain"], ["87", "Spain"], ["93", "Spain"]])]
+]);
 const rounds = [
   [[73, "2A", "2B"], [74, "1E", "3A/B/C/D/F"], [75, "1F", "2C"], [76, "1C", "2F"], [77, "1I", "3C/D/F/G/H"], [78, "2E", "2I"], [79, "1A", "3C/E/F/H/I"], [80, "1L", "3E/H/I/J/K"], [81, "1D", "3B/E/F/I/J"], [82, "1G", "3A/E/H/I/J"], [83, "2K", "2L"], [84, "1H", "2J"], [85, "1B", "3E/F/G/I/J"], [86, "1J", "2H"], [87, "1K", "3D/E/I/J/L"], [88, "2D", "2G"]],
   [[89, "W74", "W77"], [90, "W73", "W75"], [91, "W76", "W78"], [92, "W79", "W80"], [93, "W83", "W84"], [94, "W81", "W82"], [95, "W86", "W88"], [96, "W85", "W87"]],
@@ -133,10 +143,28 @@ function parseSubmissionTime(value) {
 function stampSubmittedMatches(picks, submittedAt) {
   if (!submittedAt) return picks;
   const matchSubmittedAt = { ...(picks.matchSubmittedAt || {}) };
+  const matchBoostCountry = { ...(picks.matchBoostCountry || {}) };
   for (const [id, match] of Object.entries(picks.matches || {})) {
-    if (hasCompleteScore(match)) matchSubmittedAt[id] = submittedAt;
+    if (!hasCompleteScore(match)) continue;
+    matchSubmittedAt[id] = submittedAt;
+    matchBoostCountry[id] = picks.boostCountry || "";
   }
-  return { ...picks, matchSubmittedAt };
+  return { ...picks, matchSubmittedAt, matchBoostCountry };
+}
+
+function goalMinute(value) {
+  return (String(value || "").match(/\d+/g)?.map(Number) || []).reduce((sum, part) => sum + part, 0);
+}
+
+function submissionCutoffAt(match) {
+  const kickoffAt = Date.parse(match?.date || "");
+  if (!Number.isFinite(kickoffAt)) return null;
+  const goalMinutes = [...(match.homeScorerTimes || []), ...(match.awayScorerTimes || [])]
+    .map(goalMinute)
+    .filter((minute) => minute > 0);
+  if (goalMinutes.length) return Math.min(kickoffAt + submissionGraceMs, kickoffAt + Math.min(...goalMinutes) * 60 * 1000);
+  if (Number(match.homeScore) + Number(match.awayScore) > 0) return kickoffAt;
+  return kickoffAt + submissionGraceMs;
 }
 
 export function scorePicks(picks, data) {
@@ -146,6 +174,8 @@ export function scorePicks(picks, data) {
 export function scorePicksDetailed(picks, data, options = {}) {
   picks = sanitizePicks(picks || {});
   const actualRaw = data.matchResults || {};
+  const tracksSubmissionTimes = Boolean(picks.matchSubmittedAt);
+  const kickoffExceptions = new Set(picks.kickoffExceptions || []);
   const actualCache = new Map();
   const predictedCache = new Map();
 
@@ -233,6 +263,9 @@ export function scorePicksDetailed(picks, data, options = {}) {
     const pick = picks.matches?.[id];
     if (!actual || !predicted || !pick || predicted.home !== actual.home || predicted.away !== actual.away) continue;
     if (!hasScore(pick.home) || !hasScore(pick.away)) continue;
+    const submittedAt = Number(picks.matchSubmittedAt?.[id]);
+    const submissionCutoff = submissionCutoffAt(actual);
+    if (tracksSubmissionTimes && Number.isFinite(submissionCutoff) && !kickoffExceptions.has(id) && (!Number.isFinite(submittedAt) || submittedAt >= submissionCutoff)) continue;
 
     const exact = Number(pick.home) === actual.homeScore && Number(pick.away) === actual.awayScore;
     const result = !exact && matchWinnerSide(pick) === actual.winnerSide;
@@ -241,19 +274,21 @@ export function scorePicksDetailed(picks, data, options = {}) {
       countScorers(pick.awayScorers, actual.awayScorers)
     );
     const rawPoints = (exact ? 3 : result ? 1 : 0) + scorers;
-    const boostMultiplier = [actual.home, actual.away].includes(picks.boostCountry) ? 2 : 1;
+    const boostCountry = picks.matchBoostCountry?.[id] ?? picks.boostCountry;
+    const boostMultiplier = [actual.home, actual.away].includes(boostCountry) ? 2 : 1;
     const rescue = picks.emergencyFunding || {};
     const winnerName = actual.winnerSide === "home" ? actual.home : actual.winnerSide === "away" ? actual.away : "";
     const rescueActive = options.emergencyEligible && rescue.matchId === id && quarterfinalIds.has(id);
     const multiplier = rescueActive && !options.emergencyBoostStacks ? 1 : boostMultiplier;
-    const basePoints = rawPoints * multiplier;
     const rescueTeamWon = rescueActive && rescue.team && rescue.team === winnerName;
     const rescueBonus = rescueActive
       ? (exact ? 2 : 0) +
         (rescueTeamWon && Number.isFinite(actual.homeShootoutScore) && Number.isFinite(actual.awayShootoutScore) ? 2 : 0) +
         (rescueTeamWon && options.emergencyUnderdogs?.[id] === rescue.team ? 3 : 0)
       : 0;
-    const points = (rescueActive ? basePoints * 2 : basePoints) + rescueBonus;
+    const points = rescueActive
+      ? (rawPoints * 2 + rescueBonus) * multiplier
+      : rawPoints * multiplier;
 
     total.exact += exact ? 1 : 0;
     total.result += result ? 1 : 0;
@@ -295,16 +330,29 @@ function cleanScorers(match, side) {
     .slice(0, scorerLimit(match, side));
 }
 
-export function mergeCompletedPicks(previous, latest, completedIds) {
+export function mergeSubmittedPicks(previous, latest, submissionCutoffs, submittedAt, kickoffExceptions = new Set()) {
   const merged = {
     ...latest,
+    boostCountry: latest.boostCountry || previous.boostCountry || "",
     matches: { ...(latest.matches || {}) },
-    matchSubmittedAt: { ...(latest.matchSubmittedAt || {}) }
+    matchSubmittedAt: { ...(latest.matchSubmittedAt || {}) },
+    matchBoostCountry: { ...(latest.matchBoostCountry || {}) }
   };
-  for (const id of completedIds) {
-    if (hasCompleteScore(previous.matches?.[id]) && !hasCompleteScore(latest.matches?.[id])) {
+  const ids = new Set([...Object.keys(previous.matches || {}), ...Object.keys(latest.matches || {})]);
+  for (const id of ids) {
+    const submissionCutoff = submissionCutoffs.get(id);
+    const firstSubmissionException = kickoffExceptions.has(id) && !hasCompleteScore(previous.matches?.[id]);
+    const locked = !Number.isFinite(submittedAt) ||
+      !firstSubmissionException && Number.isFinite(submissionCutoff) && submittedAt >= submissionCutoff;
+    if (!locked && hasCompleteScore(latest.matches?.[id])) continue;
+    if (hasCompleteScore(previous.matches?.[id])) {
       merged.matches[id] = previous.matches[id];
       if (previous.matchSubmittedAt?.[id]) merged.matchSubmittedAt[id] = previous.matchSubmittedAt[id];
+      if (Object.hasOwn(previous.matchBoostCountry || {}, id)) merged.matchBoostCountry[id] = previous.matchBoostCountry[id];
+    } else if (locked) {
+      delete merged.matches[id];
+      delete merged.matchSubmittedAt[id];
+      delete merged.matchBoostCountry[id];
     }
   }
   return merged;
@@ -313,6 +361,11 @@ export function mergeCompletedPicks(previous, latest, completedIds) {
 export function sanitizePicks(picks) {
   const matchSubmittedAt = Object.fromEntries(Object.entries(picks.matchSubmittedAt || {})
     .filter(([id, value]) => matchesById.has(String(id)) && Number.isFinite(Number(value))));
+  const matchBoostCountry = Object.fromEntries(Object.entries(picks.matchBoostCountry || {})
+    .filter(([id, value]) => matchesById.has(String(id)) && typeof value === "string"));
+  const kickoffExceptions = [...new Set(picks.kickoffExceptions || [])]
+    .map(String)
+    .filter((id) => matchesById.has(id));
   const emergencyFunding = picks.emergencyFunding?.matchId && quarterfinalIds.has(String(picks.emergencyFunding.matchId))
     ? { matchId: String(picks.emergencyFunding.matchId), team: picks.emergencyFunding.team || "" }
     : null;
@@ -320,6 +373,8 @@ export function sanitizePicks(picks) {
     boostCountry: picks.boostCountry || "",
     ...(emergencyFunding ? { emergencyFunding } : {}),
     ...(Object.keys(matchSubmittedAt).length ? { matchSubmittedAt } : {}),
+    ...(Object.keys(matchBoostCountry).length ? { matchBoostCountry } : {}),
+    ...(kickoffExceptions.length ? { kickoffExceptions } : {}),
     matches: Object.fromEntries(Object.entries(picks.matches || {})
       .filter(([id]) => matchesById.has(String(id)))
       .map(([id, match]) => [id, {
@@ -340,8 +395,16 @@ function preQuarterfinalScore(row) {
 function emergencyTiers(rows) {
   return new Map(rows.map(preQuarterfinalScore).map((row) => [
     row.key,
-    row.points >= 34 ? null : { boostStacks: row.points <= 24 }
+    row.points >= 33 ? null : { boostStacks: row.points <= 24 }
   ]));
+}
+
+function matchSubmissionCutoffs(data) {
+  return new Map(Object.entries({ ...(data.matchResults || {}), ...(data.liveMatches || {}) })
+    .flatMap(([id, match]) => {
+      const submissionCutoff = submissionCutoffAt(match);
+      return Number.isFinite(submissionCutoff) ? [[id, submissionCutoff]] : [];
+    }));
 }
 
 function winnerSide(pick) {
@@ -380,7 +443,13 @@ function emergencyFundingLive(data) {
   return roundOf16Ids.every((id) => data.matchResults?.[id]?.winnerSide);
 }
 
+export function applyPublishedScoringOverrides(bracketName, picks) {
+  const boosts = publishedBoostOverrides.get(bracketName);
+  return boosts ? { ...picks, matchBoostCountry: { ...(picks.matchBoostCountry || {}), ...Object.fromEntries(boosts) } } : picks;
+}
+
 export function scoreRows(rows, data) {
+  rows = rows.map((row) => ({ ...row, picks: applyPublishedScoringOverrides(row.base.bracketName, row.picks) }));
   const fundingLive = emergencyFundingLive(data);
   const tiers = fundingLive ? emergencyTiers(rows.map((row) => ({ ...row, data }))) : new Map();
   const underdogs = fundingLive ? emergencyUnderdogs(rows, data) : {};
@@ -418,7 +487,7 @@ async function main() {
   const [headers, ...rows] = parseCsv(await response.text());
   const allRows = rows.map((entry) => rowObject(headers, entry));
   const formBracketNames = new Set(allRows.map((row) => row["bracket name"]).filter(Boolean));
-  const completedIds = new Set(Object.keys(data.matchResults || {}));
+  const submissionCutoffs = matchSubmissionCutoffs(data);
   const latestByEmail = new Map();
 
   for (const row of allRows.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))) {
@@ -427,9 +496,15 @@ async function main() {
     if (removedBracketNames.has(row["bracket name"])) continue;
 
     const previous = latestByEmail.get(email);
-    const picks = stampSubmittedMatches(sanitizePicks(parsePicks(row)), parseSubmissionTime(row.timestamp));
-    const merged = sanitizePicks(previous ? mergeCompletedPicks(parsePicks(previous), picks, completedIds) : picks);
-    latestByEmail.set(email, { ...row, picks: JSON.stringify(merged) });
+    const submittedAt = parseSubmissionTime(row.timestamp);
+    const kickoffExceptions = firstSubmissionExceptions.get(row["bracket name"]) || new Set();
+    const picks = sanitizePicks(parsePicks(row));
+    picks.boostCountry ||= row["boost country"] || "";
+    const stamped = stampSubmittedMatches(picks, submittedAt);
+    const merged = mergeSubmittedPicks(previous ? parsePicks(previous) : {}, stamped, submissionCutoffs, submittedAt, kickoffExceptions);
+    if (kickoffExceptions.size) merged.kickoffExceptions = [...kickoffExceptions];
+    const sanitized = sanitizePicks(merged);
+    latestByEmail.set(email, { ...row, picks: JSON.stringify(sanitized) });
   }
 
   const existingSeeded = (data.leaderboard || [])
