@@ -493,6 +493,7 @@ function timelineDayLabel(day, compact = false) {
 
 function leaderboardTimeline() {
   const matchesByDay = new Map();
+  const roundByMatch = new Map(rounds.flatMap((round) => round.matches.map(([id]) => [String(id), round.name])));
   Object.entries(matchResults).forEach(([id, result]) => {
     if (!result?.date) return;
     const day = etSoccerDateKey(new Date(result.date).getTime());
@@ -501,6 +502,11 @@ function leaderboardTimeline() {
   });
   const days = [...matchesByDay.keys()].sort();
   if (!days.length) return { days: [], rows: [] };
+  const phases = days.reduce((entries, day, index) => {
+    const name = roundByMatch.get(matchesByDay.get(day)[0]);
+    if (name && entries[entries.length - 1]?.name !== name) entries.push({ name, index });
+    return entries;
+  }, []);
 
   const rows = (data.leaderboard || []).map((row) => ({
     key: leaderboardRowKey(row),
@@ -527,7 +533,7 @@ function leaderboardTimeline() {
     });
   });
 
-  return { days, rows };
+  return { days, rows, phases };
 }
 
 function leaderboardScoreThrough(row, includedMatches) {
@@ -547,6 +553,18 @@ function timelinePath(values, days, x, y) {
 
 function compactTimelineName(name, limit) {
   return name.length > limit ? `${name.slice(0, limit - 1).trimEnd()}…` : name;
+}
+
+function timelinePhaseLabel(name, width, compact) {
+  const short = {
+    "round of 32": "R32",
+    "round of 16": "R16",
+    quarterfinals: "QF",
+    semifinals: "SF",
+    "third place": "3RD",
+    final: "FINAL"
+  }[name] || name;
+  return compact || width < name.length * 7 + 12 ? short : name;
 }
 
 function setTimelineSelection(key) {
@@ -592,7 +610,7 @@ function renderLeaderboardTimeline() {
   const width = Math.max(300, Math.round(rankTimelineEl.clientWidth));
   const compact = width <= 620;
   const height = compact ? 480 : 520;
-  const margin = { top: 16, right: compact ? 12 : 198, bottom: compact ? 68 : 46, left: 34 };
+  const margin = { top: 38, right: compact ? 12 : 198, bottom: compact ? 68 : 46, left: 34 };
   renderedTimelineWidth = width;
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
@@ -604,6 +622,16 @@ function renderLeaderboardTimeline() {
   if (rankTicks[rankTicks.length - 1] !== maxRank) rankTicks.push(maxRank);
   const currentTopFive = new Set(currentOrder.slice(0, 5).map((row) => row.key));
   const orderedRows = [...timeline.rows].sort((a, b) => a.key === selectedTimelineRow ? 1 : b.key === selectedTimelineRow ? -1 : 0);
+  const dayStep = timeline.days.length > 1 ? plotWidth / (timeline.days.length - 1) : plotWidth;
+  const phaseBands = timeline.phases.map((phase, index) => {
+    const next = timeline.phases[index + 1];
+    const startX = phase.index === 0 ? margin.left : x(phase.index) - dayStep / 2;
+    const endX = next ? x(next.index) - dayStep / 2 : width - margin.right;
+    const label = timelinePhaseLabel(phase.name, endX - startX, compact);
+    return `<rect class="rank-timeline__phase-band${index % 2 ? " alternate" : ""}" x="${startX}" y="${margin.top}" width="${Math.max(0, endX - startX)}" height="${plotHeight}"></rect>
+      ${index ? `<line class="rank-timeline__phase-divider" x1="${startX}" y1="4" x2="${startX}" y2="${height - margin.bottom}"></line>` : ""}
+      <text class="rank-timeline__phase-label" x="${startX + 5}" y="18" aria-label="${escapeAttribute(phase.name)}">${escapeHtml(label)}</text>`;
+  }).join("");
 
   const dayGrid = timeline.days.map((day, index) => `
     <line class="rank-timeline__grid" x1="${x(index)}" y1="${margin.top}" x2="${x(index)}" y2="${height - margin.bottom}"></line>
@@ -638,10 +666,9 @@ function renderLeaderboardTimeline() {
   }).join("");
 
   rankTimelineEl.querySelector("svg")?.remove();
-  rankTimelineEl.insertAdjacentHTML("afterbegin", `<svg viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="rank-timeline-title rank-timeline-description">
-    <title id="rank-timeline-title">Leaderboard position by World Cup game day</title>
-    <desc id="rank-timeline-description">Each line represents one bracket. Rank one is at the top. Select or hover a line for details.</desc>
-    ${dayGrid}${rankGrid}${lines}${endpoints}
+  rankTimelineEl.insertAdjacentHTML("afterbegin", `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Leaderboard position by World Cup game day" aria-describedby="rank-timeline-description">
+    <desc id="rank-timeline-description">Each line represents one bracket. Rank one is at the top. Tournament rounds are separated by labeled gold dividers. Select or hover a line for details.</desc>
+    ${phaseBands}${dayGrid}${rankGrid}${lines}${endpoints}
   </svg>`);
 
   rankTimelineEl.querySelectorAll("[data-timeline-hit]").forEach((path) => {
