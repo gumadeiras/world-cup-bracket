@@ -133,6 +133,11 @@ const scorerCardsEl = document.querySelector("[data-scorer-cards]");
 const standingsUpdatedEl = document.querySelector("[data-standings-updated]");
 const leaderboardEl = document.querySelector("[data-leaderboard]");
 const leaderboardUpdatedEl = document.querySelector("[data-leaderboard-updated]");
+const rankTimelineEl = document.querySelector("[data-rank-timeline]");
+const rankTimelineUpdatedEl = document.querySelector("[data-rank-timeline-updated]");
+const rankTimelineSelectEl = document.querySelector("[data-rank-timeline-select]");
+const rankTimelineSummaryEl = document.querySelector("[data-rank-timeline-summary]");
+const rankTimelineTooltipEl = document.querySelector("[data-rank-timeline-tooltip]");
 const statCrimesEl = document.querySelector("[data-stat-crimes]");
 const statCrimesUpdatedEl = document.querySelector("[data-stat-crimes-updated]");
 const r16StatCrimesEl = document.querySelector("[data-r16-stat-crimes]");
@@ -467,6 +472,234 @@ function renderLeaderboard() {
     <div class="leader-row">
       <span>-</span><span>TBD</span><span>-</span><span>0</span><span>0</span><span>0</span><span>0</span>
     </div>`;
+}
+
+let selectedTimelineRow = "";
+let renderedTimelineWidth = 0;
+
+function leaderboardJoinedDay(row, firstDay) {
+  const submitted = Object.values(row.picks?.matchSubmittedAt || {}).filter(Number.isFinite);
+  return submitted.length ? etSoccerDateKey(Math.min(...submitted)) : firstDay;
+}
+
+function timelineDayLabel(day, compact = false) {
+  if (compact) {
+    const [, month, date] = day.split("-").map(Number);
+    return `${month}/${date}`;
+  }
+  return new Intl.DateTimeFormat("en-US", { day: "numeric", month: "short", timeZone: "UTC" })
+    .format(new Date(`${day}T12:00:00Z`));
+}
+
+function leaderboardTimeline() {
+  const matchesByDay = new Map();
+  Object.entries(matchResults).forEach(([id, result]) => {
+    if (!result?.date) return;
+    const day = etSoccerDateKey(new Date(result.date).getTime());
+    if (!matchesByDay.has(day)) matchesByDay.set(day, []);
+    matchesByDay.get(day).push(String(id));
+  });
+  const days = [...matchesByDay.keys()].sort();
+  if (!days.length) return { days: [], rows: [] };
+
+  const rows = (data.leaderboard || []).map((row) => ({
+    key: leaderboardRowKey(row),
+    name: row.bracketName,
+    bracketName: row.bracketName,
+    joined: leaderboardJoinedDay(row, days[0]),
+    row,
+    values: []
+  }));
+  const includedMatches = new Set();
+
+  days.forEach((day) => {
+    matchesByDay.get(day).forEach((id) => includedMatches.add(id));
+    const active = rows
+      .filter((entry) => entry.joined <= day)
+      .map((entry) => {
+        const score = leaderboardScoreThrough(entry.row, includedMatches);
+        return { ...entry, ...score };
+      })
+      .sort(compareLeaderboardRows);
+    active.forEach((entry, index) => {
+      const target = rows.find((row) => row.key === entry.key);
+      target.values.push({ day, rank: index + 1, points: entry.points, exact: entry.exact, scorers: entry.scorers });
+    });
+  });
+
+  return { days, rows };
+}
+
+function leaderboardScoreThrough(row, includedMatches) {
+  return (row.matchBreakdown || []).reduce((score, match) => {
+    if (!includedMatches.has(String(match.id))) return score;
+    score.points += match.points || 0;
+    score.exact += match.exact || 0;
+    score.result += match.result || 0;
+    score.scorers += match.scorers || 0;
+    return score;
+  }, { points: 0, exact: 0, result: 0, scorers: 0 });
+}
+
+function timelinePath(values, days, x, y) {
+  return values.map((value, index) => `${index ? "L" : "M"}${x(days.indexOf(value.day))},${y(value.rank)}`).join(" ");
+}
+
+function compactTimelineName(name, limit) {
+  return name.length > limit ? `${name.slice(0, limit - 1).trimEnd()}…` : name;
+}
+
+function setTimelineSelection(key) {
+  selectedTimelineRow = key;
+  if (rankTimelineTooltipEl) rankTimelineTooltipEl.hidden = true;
+  rankTimelineEl?.classList.remove("is-focusing");
+  if (rankTimelineSelectEl) rankTimelineSelectEl.value = key;
+  renderLeaderboardTimeline();
+}
+
+function renderLeaderboardTimeline() {
+  if (!rankTimelineEl || !rankTimelineSelectEl) return;
+  const timeline = leaderboardTimeline();
+  if (rankTimelineUpdatedEl) {
+    rankTimelineUpdatedEl.textContent = `updated ${displayTimestamp(data.leaderboardUpdated || data.updated)}`;
+  }
+  if (!timeline.days.length || !timeline.rows.length) {
+    rankTimelineEl.innerHTML = "<p>Timeline begins after the first completed game day.</p>";
+    return;
+  }
+
+  const currentOrder = [...timeline.rows].sort((a, b) => {
+    const aValue = a.values[a.values.length - 1];
+    const bValue = b.values[b.values.length - 1];
+    return (aValue?.rank ?? Infinity) - (bValue?.rank ?? Infinity);
+  });
+  if (!selectedTimelineRow || !timeline.rows.some((row) => row.key === selectedTimelineRow)) {
+    selectedTimelineRow = currentOrder[0].key;
+  }
+  rankTimelineSelectEl.innerHTML = currentOrder
+    .map((row) => `<option value="${escapeAttribute(row.key)}">${escapeHtml(row.name)}</option>`)
+    .join("");
+  rankTimelineSelectEl.value = selectedTimelineRow;
+
+  const selected = timeline.rows.find((row) => row.key === selectedTimelineRow);
+  const selectedValues = selected?.values || [];
+  const latest = selectedValues[selectedValues.length - 1];
+  const peak = selectedValues.length ? Math.min(...selectedValues.map((value) => value.rank)) : null;
+  rankTimelineSummaryEl.innerHTML = latest
+    ? `<b>#${latest.rank} now</b>. peak #${peak}. ${latest.points} points.`
+    : "No completed game days yet.";
+
+  const width = Math.max(300, Math.round(rankTimelineEl.clientWidth));
+  const compact = width <= 620;
+  const height = compact ? 480 : 520;
+  const margin = { top: 16, right: compact ? 12 : 198, bottom: compact ? 68 : 46, left: 34 };
+  renderedTimelineWidth = width;
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const maxRank = Math.max(...timeline.rows.flatMap((row) => row.values.map((value) => value.rank)));
+  const x = (index) => margin.left + (timeline.days.length === 1 ? plotWidth / 2 : index * plotWidth / (timeline.days.length - 1));
+  const y = (rank) => margin.top + (rank - 1) * plotHeight / Math.max(1, maxRank - 1);
+  const rankTicks = [1, ...Array.from({ length: Math.floor(maxRank / 5) }, (_, index) => (index + 1) * 5)]
+    .filter((rank, index, values) => rank <= maxRank && values.indexOf(rank) === index);
+  if (rankTicks[rankTicks.length - 1] !== maxRank) rankTicks.push(maxRank);
+  const currentTopFive = new Set(currentOrder.slice(0, 5).map((row) => row.key));
+  const orderedRows = [...timeline.rows].sort((a, b) => a.key === selectedTimelineRow ? 1 : b.key === selectedTimelineRow ? -1 : 0);
+
+  const dayGrid = timeline.days.map((day, index) => `
+    <line class="rank-timeline__grid" x1="${x(index)}" y1="${margin.top}" x2="${x(index)}" y2="${height - margin.bottom}"></line>
+    <text class="rank-timeline__axis-label" x="${x(index)}" y="${height - (compact ? 18 : 15)}" text-anchor="${compact ? "end" : "middle"}"${compact ? ` transform="rotate(-48 ${x(index)} ${height - 18})"` : ""}>${escapeHtml(timelineDayLabel(day, compact))}</text>`).join("");
+  const rankGrid = rankTicks.map((rank) => `
+    <line class="rank-timeline__grid" x1="${margin.left}" y1="${y(rank)}" x2="${width - margin.right}" y2="${y(rank)}"></line>
+    <text class="rank-timeline__axis-label" x="${margin.left - 9}" y="${y(rank) + 4}" text-anchor="end">${rank}</text>`).join("");
+  const lines = orderedRows.map((row) => {
+    if (!row.values.length) return "";
+    const path = timelinePath(row.values, timeline.days, x, y);
+    const active = row.key === selectedTimelineRow;
+    const className = `rank-timeline__line${currentTopFive.has(row.key) ? " top-five" : ""}${active ? " is-active" : ""}`;
+    return `<path class="${className}" data-timeline-line="${escapeAttribute(row.key)}" d="${path}"></path>
+      <path class="rank-timeline__hit" data-timeline-hit="${escapeAttribute(row.key)}" d="${path}" aria-hidden="true"></path>`;
+  }).join("");
+  const endpoints = orderedRows.map((row) => {
+    if (!row.values.length) return "";
+    const last = row.values[row.values.length - 1];
+    const endX = x(timeline.days.indexOf(last.day));
+    const endY = y(last.rank);
+    const label = `${compactTimelineName(row.name, 22)} #${last.rank}`;
+    const labelWidth = Math.min(compact ? 210 : 184, Math.max(92, label.length * 7.2 + 12));
+    const labelX = compact ? Math.max(4, endX - labelWidth - 10) : endX + 10;
+    const labelY = Math.max(margin.top, Math.min(height - margin.bottom - 23, endY - 11));
+    const active = row.key === selectedTimelineRow;
+    return `<g class="rank-timeline__endpoint${active ? " is-active" : ""}" data-timeline-endpoint="${escapeAttribute(row.key)}">
+      <line x1="${endX}" y1="${endY}" x2="${compact ? labelX + labelWidth : labelX}" y2="${labelY + 11}"></line>
+      <rect x="${labelX}" y="${labelY}" width="${labelWidth}" height="23"></rect>
+      <text x="${labelX + 6}" y="${labelY + 15}">${escapeHtml(label)}</text>
+      <circle cx="${endX}" cy="${endY}" r="4"></circle>
+    </g>`;
+  }).join("");
+
+  rankTimelineEl.querySelector("svg")?.remove();
+  rankTimelineEl.insertAdjacentHTML("afterbegin", `<svg viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="rank-timeline-title rank-timeline-description">
+    <title id="rank-timeline-title">Leaderboard position by World Cup game day</title>
+    <desc id="rank-timeline-description">Each line represents one bracket. Rank one is at the top. Select or hover a line for details.</desc>
+    ${dayGrid}${rankGrid}${lines}${endpoints}
+  </svg>`);
+
+  rankTimelineEl.querySelectorAll("[data-timeline-hit]").forEach((path) => {
+    const key = path.dataset.timelineHit;
+    path.addEventListener("pointermove", (event) => showTimelineTooltip(event, key, timeline, width, height, margin));
+    path.addEventListener("pointerleave", hideTimelineTooltip);
+    path.addEventListener("click", () => setTimelineSelection(key));
+  });
+}
+
+function setTimelineHover(key, focusing = false) {
+  rankTimelineEl.classList.toggle("is-focusing", focusing);
+  rankTimelineEl.querySelectorAll("[data-timeline-line]").forEach((line) => {
+    line.classList.toggle("is-active", line.dataset.timelineLine === key);
+  });
+  rankTimelineEl.querySelectorAll("[data-timeline-endpoint]").forEach((endpoint) => {
+    endpoint.classList.toggle("is-active", endpoint.dataset.timelineEndpoint === key);
+  });
+}
+
+function showTimelineTooltip(event, key, timeline, width, height, margin) {
+  const row = timeline.rows.find((entry) => entry.key === key);
+  if (!row?.values.length || !rankTimelineTooltipEl) return;
+  setTimelineHover(key, true);
+  const bounds = rankTimelineEl.getBoundingClientRect();
+  const cursorX = Math.max(margin.left, Math.min(width - margin.right, event.clientX - bounds.left));
+  const dayIndex = Math.round((cursorX - margin.left) / Math.max(1, width - margin.left - margin.right) * Math.max(0, timeline.days.length - 1));
+  const day = timeline.days[dayIndex];
+  const value = row.values.find((entry) => entry.day === day) || row.values.reduce((closest, entry) => {
+    return Math.abs(timeline.days.indexOf(entry.day) - dayIndex) < Math.abs(timeline.days.indexOf(closest.day) - dayIndex) ? entry : closest;
+  });
+  const valueIndex = row.values.indexOf(value);
+  const previous = row.values[valueIndex - 1];
+  const pointChange = previous ? value.points - previous.points : value.points;
+  const rankChange = previous ? previous.rank - value.rank : 0;
+  const pointStory = pointChange === 0 ? "No points." : `+${pointChange} point${pointChange === 1 ? "" : "s"}.`;
+  const movement = !previous
+    ? `Joined at #${value.rank}.`
+    : rankChange > 0
+      ? `Up ${rankChange} to #${value.rank}.`
+      : rankChange < 0
+        ? `Down ${Math.abs(rankChange)} to #${value.rank}.`
+        : `Held #${value.rank}.`;
+  rankTimelineTooltipEl.innerHTML = `<b>${escapeHtml(row.name)}</b>${escapeHtml(timelineDayLabel(value.day))}. ${pointStory} ${movement}`;
+  rankTimelineTooltipEl.hidden = false;
+  const tooltipWidth = rankTimelineTooltipEl.offsetWidth;
+  const tooltipHeight = rankTimelineTooltipEl.offsetHeight;
+  rankTimelineTooltipEl.style.left = `${Math.max(8, Math.min(bounds.width - tooltipWidth - 8, event.clientX - bounds.left + 12))}px`;
+  rankTimelineTooltipEl.style.top = `${Math.max(8, Math.min(height - tooltipHeight - 8, event.clientY - bounds.top - tooltipHeight - 12))}px`;
+}
+
+function hideTimelineTooltip() {
+  if (rankTimelineTooltipEl) rankTimelineTooltipEl.hidden = true;
+  setTimelineHover(selectedTimelineRow, false);
+}
+
+function resizeLeaderboardTimeline() {
+  if (Math.round(rankTimelineEl?.clientWidth || 0) !== renderedTimelineWidth) renderLeaderboardTimeline();
 }
 
 function sortedLeaderboard() {
@@ -1821,6 +2054,7 @@ if (!renderEntryDetail()) {
   updateTickerPlayback();
   renderStandings();
   renderLeaderboard();
+  renderLeaderboardTimeline();
   renderStatCrimes();
   render();
   enhanceDetails();
@@ -1828,8 +2062,11 @@ if (!renderEntryDetail()) {
   window.addEventListener("resize", () => {
     renderTicker();
     updateTickerPlayback();
+    resizeLeaderboardTimeline();
     layoutBracketCards();
     drawBracketLines();
     updateScrollHint();
   });
 }
+
+rankTimelineSelectEl?.addEventListener("change", () => setTimelineSelection(rankTimelineSelectEl.value));

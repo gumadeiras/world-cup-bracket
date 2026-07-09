@@ -451,6 +451,203 @@
       text-underline-offset: 3px;
     }
 
+    .rank-timeline {
+      margin-bottom: 18px;
+      border: 1px solid var(--ink);
+      background: rgba(255, 250, 240, 0.78);
+      padding: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .rank-timeline__head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      align-items: baseline;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 12px;
+    }
+
+    .rank-timeline__head h2 {
+      margin: 0 0 8px;
+      font-size: var(--type-md);
+      text-transform: uppercase;
+    }
+
+    .rank-timeline__head p {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: var(--type-sm);
+      text-transform: uppercase;
+    }
+
+    .rank-timeline__controls {
+      display: grid;
+      grid-template-columns: minmax(220px, 360px) minmax(0, 1fr);
+      gap: 10px 18px;
+      align-items: end;
+      margin-bottom: 10px;
+    }
+
+    .rank-timeline__controls label {
+      display: grid;
+      gap: 5px;
+      font-size: var(--type-sm);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .rank-timeline__summary {
+      margin: 0 0 9px;
+      color: var(--muted);
+      font-size: var(--type-sm);
+      font-variant-numeric: tabular-nums;
+      text-transform: uppercase;
+    }
+
+    .rank-timeline__summary b {
+      color: var(--ink);
+    }
+
+    .rank-timeline__plot {
+      position: relative;
+      width: 100%;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .rank-timeline__plot svg {
+      display: block;
+      width: 100%;
+      height: 520px;
+      overflow: visible;
+      font-family: inherit;
+      font-size: var(--type-sm);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rank-timeline__grid {
+      stroke: var(--line);
+      stroke-width: 1;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .rank-timeline__axis-label {
+      fill: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .rank-timeline__line {
+      fill: none;
+      stroke: var(--muted);
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-opacity: 0.2;
+      stroke-width: 1.25;
+      vector-effect: non-scaling-stroke;
+      transition: stroke 180ms ease, stroke-opacity 180ms ease, stroke-width 180ms ease;
+    }
+
+    .rank-timeline__line.top-five {
+      stroke: var(--green);
+      stroke-opacity: 0.55;
+      stroke-width: 1.75;
+    }
+
+    .rank-timeline__line.is-active {
+      stroke: var(--red);
+      stroke-opacity: 1;
+      stroke-width: 3;
+      filter: drop-shadow(0 2px 0 rgba(200, 147, 43, 0.5));
+    }
+
+    .rank-timeline__plot.is-focusing .rank-timeline__line:not(.is-active) {
+      stroke-opacity: 0.07;
+    }
+
+    .rank-timeline__plot.is-focusing .rank-timeline__line.is-active {
+      stroke-width: 3.5;
+    }
+
+    .rank-timeline__hit {
+      fill: none;
+      stroke: transparent;
+      stroke-width: 14;
+      cursor: pointer;
+      pointer-events: stroke;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .rank-timeline__endpoint {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease;
+    }
+
+    .rank-timeline__endpoint.is-active {
+      opacity: 1;
+    }
+
+    .rank-timeline__endpoint line {
+      stroke: var(--gold);
+      stroke-width: 1.5;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .rank-timeline__endpoint rect {
+      fill: var(--paper);
+      stroke: var(--gold);
+      stroke-width: 1;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .rank-timeline__endpoint text {
+      fill: var(--red);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .rank-timeline__endpoint circle {
+      fill: var(--paper);
+      stroke: var(--red);
+      stroke-width: 2;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .rank-timeline__tooltip {
+      position: absolute;
+      z-index: 4;
+      max-width: min(260px, calc(100% - 16px));
+      border: 1px solid var(--ink);
+      background: var(--paper);
+      padding: 7px 9px;
+      box-shadow: 4px 4px 0 rgba(176, 8, 47, 0.16);
+      font-size: var(--type-sm);
+      line-height: 1.35;
+      pointer-events: none;
+      text-transform: uppercase;
+    }
+
+    .rank-timeline__tooltip b {
+      display: block;
+      color: var(--red);
+    }
+
+    @media (max-width: 620px) {
+      .rank-timeline__controls {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .rank-timeline__summary {
+        margin-bottom: 0;
+      }
+
+      .rank-timeline__plot svg {
+        height: 480px;
+      }
+    }
+
     .stat-crimes {
       margin-bottom: 18px;
       border: 1px solid var(--ink);
@@ -2206,6 +2403,23 @@
         </details>
       </div>
     </div>
+
+    <section class="rank-timeline" aria-label="leaderboard timeline">
+      <div class="rank-timeline__head">
+        <h2>leaderboard timeline</h2>
+        <p data-rank-timeline-updated></p>
+      </div>
+      <div class="rank-timeline__controls">
+        <label>
+          highlight bracket
+          <select class="field" data-rank-timeline-select></select>
+        </label>
+        <p class="rank-timeline__summary" data-rank-timeline-summary></p>
+      </div>
+      <div class="rank-timeline__plot" data-rank-timeline>
+        <div class="rank-timeline__tooltip" data-rank-timeline-tooltip hidden></div>
+      </div>
+    </section>
 
     <div class="ticker" aria-hidden="true">
       <div class="ticker__track" data-ticker-track data-text="round of 32 starts june 28 / boost country games count double / exact score: 3 / correct result: 1 / scorer bonus: +1 each, max 3 / ">
