@@ -604,7 +604,7 @@ function renderLeaderboardTimeline() {
   const latest = selectedValues[selectedValues.length - 1];
   const peak = selectedValues.length ? Math.min(...selectedValues.map((value) => value.rank)) : null;
   rankTimelineSummaryEl.innerHTML = latest
-    ? `<b>#${latest.rank} now</b>. peak #${peak}. ${latest.points} points.`
+    ? `<b>#${latest.rank} now</b>. peak #${peak}. ${formatCount(latest.points, "point")}.`
     : "No completed game days yet.";
 
   const width = Math.max(300, Math.round(rankTimelineEl.clientWidth));
@@ -947,9 +947,9 @@ function renderEntryDetail() {
     </div>
     <div class="entry-stats">
       <span>boost <em class="entry-boost">${renderBoostCountry(row.boostCountry)}</em></span>
-      <span>${row.exact || 0} exact</span>
-      <span>${row.result || 0} result</span>
-      <span>${row.scorers || 0} scorers</span>
+      <span>${formatCount(row.exact || 0, "exact score")}</span>
+      <span>${formatCount(row.result || 0, "result")}</span>
+      <span>${formatCount(row.scorers || 0, "scorer")}</span>
     </div>
     ${row.picks ? rounds.map((round) => `
       <section class="entry-round">
@@ -1370,14 +1370,14 @@ function renderStatCrimesPanel(target, updatedEl, { completed, includeBracket, m
   })).sort((a, b) => b.points - a.points || a.row.bracketName.localeCompare(b.row.bracketName))[0];
 
   const characterDetail = mainCharacter?.red
-    ? `${formatCount(mainCharacter.red, "red card")}. ${formatCount(mainCharacter.yellow, "yellow card")}. ${mainCharacter.fouls} fouls. not exactly background noise.`
-    : `${mainCharacter?.yellow || 0} cards. ${mainCharacter?.fouls || 0} fouls. not exactly background noise.`;
+    ? `${formatCount(mainCharacter.red, "red card")}. ${formatCount(mainCharacter.yellow, "yellow card")}. ${formatCount(mainCharacter.fouls, "foul")}. not exactly background noise.`
+    : `${formatCount(mainCharacter?.yellow || 0, "card")}. ${formatCount(mainCharacter?.fouls || 0, "foul")}. not exactly background noise.`;
   const teamCards = [
-    includeBracket && cooked?.wrong ? statCrimeCard("QBio got cooked", `${cooked.picks} picked ${cooked.pickName}`, `${resultOutcome(cooked.result)}. receipts archived.`, "danger", statRules.cooked) : "",
+    includeBracket && cooked?.wrong ? statCrimeCard("QBio got cooked", `${formatCount(cooked.picks, "bracket")} picked ${cooked.pickName}`, `${resultOutcome(cooked.result)}. receipts archived.`, "danger", statRules.cooked) : "",
     possessionFraud ? statCrimeCard("possession is a social construct", possessionFraud.loser, `+${Math.round(possessionFraud.possession)}% possession and still out.`, "danger", statRules.possession) : "",
-    shotFraud ? statCrimeCard("shots are just vibes", shotFraud.loser, `+${shotFraud.shots} shots and nothing to show for it.`, "danger", statRules.shots) : "",
+    shotFraud ? statCrimeCard("shots are just vibes", shotFraud.loser, `+${formatCount(shotFraud.shots, "shot")} and nothing to show for it.`, "danger", statRules.shots) : "",
     includeBracket && (modelMismatch
-      ? statCrimeCard("model mismatch", `${modelMismatch.qbio} vs ${modelMismatch.odds}`, `QBio had ${modelMismatch.qbioVotes} votes. ESPN odds disagreed.`, "danger", statRules.model)
+      ? statCrimeCard("model mismatch", `${modelMismatch.qbio} vs ${modelMismatch.odds}`, `QBio had ${formatCount(modelMismatch.qbioVotes, "vote")}. ESPN odds disagreed.`, "danger", statRules.model)
       : statCrimeCard("model mismatch", "no split yet", "QBio and ESPN odds copied each other's homework.", "gold", statRules.model)),
     mainCharacter ? statCrimeCard("main character energy", mainCharacter.team, characterDetail, "gold", statRules.character) : "",
     crossMerchant ? statCrimeCard("cross merchant award", crossMerchant.team, `${formatCount(crossMerchant.crosses, "cross", "crosses")} ${crossMerchant.won ? "and survived." : "and still lost."}`, "gold", statRules.crosses) : "",
@@ -1387,9 +1387,9 @@ function renderStatCrimesPanel(target, updatedEl, { completed, includeBracket, m
     favoriteScore ? statCrimeCard("lab favorite scoreline", favoriteScore[0], `${formatCount(favoriteScore[1], "bracket")} chose the house special.`, "", statRules.scoreline) : "",
     includeBracket && coward?.count ? statCrimeCard("fear of variance", coward.row.bracketName, `${formatCount(coward.count, "low-score pick")}. defensive biology.`, "gold", statRules.coward) : "",
     includeBracket && sicko?.count ? statCrimeCard("nash equilibrium", sicko.row.bracketName, `${formatCount(sicko.count, "draw")} predicted. seek help or tenure.`, "gold", statRules.sicko) : "",
-    includeBracket && boost ? statCrimeCard("boost unemployment office", boost.country, `${formatCount(boost.believers, "believer")}. ${boost.points} boost pts`, boost.points ? "" : "danger", statRules.boost) : "",
-    includeBracket && scorerFraud ? statCrimeCard("pichichi fraud detector", scorerFraud.row.bracketName, `${scorerFraud.attempts} scorer picks. ${scorerFraud.hits} hits. ambition is not accuracy.`, "danger", statRules.pichichi) : "",
-    includeBracket && deterministic ? statCrimeCard("deterministic biology award", deterministic.row.bracketName, `${deterministic.exact || 0} exact scores. ${deterministic.points || 0} pts.`, "", statRules.deterministic) : "",
+    includeBracket && boost ? statCrimeCard("boost unemployment office", boost.country, `${formatCount(boost.believers, "believer")}. ${formatCount(boost.points, "boost point")}.`, boost.points ? "" : "danger", statRules.boost) : "",
+    includeBracket && scorerFraud ? statCrimeCard("pichichi fraud detector", scorerFraud.row.bracketName, `${formatCount(scorerFraud.attempts, "scorer pick")}. ${formatCount(scorerFraud.hits, "hit")}. ambition is not accuracy.`, "danger", statRules.pichichi) : "",
+    includeBracket && deterministic ? statCrimeCard("deterministic biology award", deterministic.row.bracketName, `${formatCount(deterministic.exact || 0, "exact score")}. ${formatCount(deterministic.points || 0, "point")}.`, "", statRules.deterministic) : "",
     includeBracket && parked?.points ? statCrimeCard("park the bus trophy", parked.row.bracketName, `${formatCount(parked.points, "ugly point")}. methods ugly, results significant.`, "gold", statRules.bus) : ""
   ].filter(Boolean);
 
