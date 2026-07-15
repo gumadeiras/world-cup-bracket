@@ -13,6 +13,8 @@ const roundOf16Ids = ["89", "90", "91", "92", "93", "94", "95", "96"];
 const quarterfinalIds = new Set(["97", "98", "99", "100"]);
 const rescueCutoffId = 97;
 const submissionGraceMs = 10 * 60 * 1000;
+const averageBracketId = "average-qbio-prediction";
+const averageBracketName = "Average QBio Prediction";
 const firstSubmissionExceptions = new Map([
   ["Dmel football", new Set(["76"])],
   ["footballers", new Set(["74"])],
@@ -128,6 +130,91 @@ function countScorers(predicted = [], actual = []) {
     hits++;
   }
   return hits;
+}
+
+function mostCommon(values) {
+  const counts = new Map();
+  for (const value of values.filter((entry) => entry !== "" && entry != null)) {
+    counts.set(value, (counts.get(value) || 0) + 1);
+  }
+  return [...counts].sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])))[0]?.[0] ?? "";
+}
+
+function mostCommonScorers(matches, side, limit, allowed = new Set()) {
+  const votes = new Map();
+  for (const match of matches) {
+    const occurrences = new Map();
+    for (const name of match?.[`${side}Scorers`] || []) {
+      if (!name || allowed.size && !allowed.has(name)) continue;
+      const occurrence = (occurrences.get(name) || 0) + 1;
+      occurrences.set(name, occurrence);
+      const key = JSON.stringify([name, occurrence]);
+      votes.set(key, (votes.get(key) || 0) + 1);
+    }
+  }
+  return [...votes]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([key]) => JSON.parse(key)[0]);
+}
+
+export function averageQBioPicks(rows, data = {}) {
+  const submissions = rows.map((row) => row.picks || row).filter((picks) => picks?.matches);
+  const matches = {};
+  const teams = new Map();
+
+  function teamFromSlot(slot) {
+    const [, kind, id] = /^([WL])(\d+)$/.exec(slot) || [];
+    const priorTeams = teams.get(id);
+    const side = matchWinnerSide(matches[id] || {});
+    if (!kind || !priorTeams || !side) return "";
+    const winner = side === "home" ? priorTeams.home : priorTeams.away;
+    const loser = side === "home" ? priorTeams.away : priorTeams.home;
+    return kind === "W" ? winner : loser;
+  }
+
+  for (const id of matchesById.keys()) {
+    const choices = submissions.map((picks) => picks.matches[id]).filter(hasCompleteScore);
+    if (!choices.length) continue;
+    const scoreKey = mostCommon(choices.map((match) => JSON.stringify([Number(match.home), Number(match.away)])));
+    const [home, away] = JSON.parse(scoreKey);
+    const matchingScores = choices.filter((match) => Number(match.home) === home && Number(match.away) === away);
+    const matchingAdvances = matchingScores.map((match) => match.advance).filter((side) => side === "home" || side === "away");
+    const advance = home === away ? mostCommon(matchingAdvances.length ? matchingAdvances : choices.map(matchWinnerSide)) : "";
+    const bracket = matchesById.get(id);
+    const matchTeams = firstRoundIds.has(id)
+      ? { home: data.matchResults?.[id]?.home || "", away: data.matchResults?.[id]?.away || "" }
+      : { home: teamFromSlot(bracket?.[1] || ""), away: teamFromSlot(bracket?.[2] || "") };
+    teams.set(id, matchTeams);
+    matches[id] = {
+      home,
+      away,
+      advance,
+      homeScorers: mostCommonScorers(choices, "home", home, new Set(data.players?.[matchTeams.home] || [])),
+      awayScorers: mostCommonScorers(choices, "away", away, new Set(data.players?.[matchTeams.away] || []))
+    };
+  }
+
+  return sanitizePicks({
+    boostCountry: mostCommon(submissions.map((picks) => picks.boostCountry).filter(Boolean)),
+    matches
+  });
+}
+
+function averageQBioRow(rows, data) {
+  const sources = rows.filter((row) => !row.base?.synthetic && !fakePicks[row.base?.bracketName] && row.base?.bracketName?.trim().toLowerCase() !== "test");
+  const picks = averageQBioPicks(sources, data);
+  if (!Object.keys(picks.matches).length) return null;
+  const score = scorePicksDetailed(picks, data);
+  return {
+    id: averageBracketId,
+    bracketName: averageBracketName,
+    boostCountry: picks.boostCountry,
+    synthetic: true,
+    ...score.total,
+    picks,
+    matchBreakdown: score.matches
+  };
 }
 
 function parseSubmissionTime(value) {
@@ -468,14 +555,19 @@ async function main() {
   const data = readData();
 
   if (!sheetCsv) {
-    const rows = (data.leaderboard || []).filter((row) => row.picks).map((row) => ({
+    const baseRows = (data.leaderboard || []).filter((row) => !row.synthetic && row.id !== averageBracketId);
+    const rows = baseRows.filter((row) => row.picks).map((row) => ({
       key: row.id || row.bracketName,
       base: row,
       picks: sanitizePicks(row.picks)
     }));
     const scored = scoreRows(rows, data);
     let scoredIndex = 0;
-    data.leaderboard = (data.leaderboard || []).map((row) => row.picks ? scored[scoredIndex++] : row);
+    const average = averageQBioRow(rows, data);
+    data.leaderboard = [
+      ...baseRows.map((row) => row.picks ? scored[scoredIndex++] : row),
+      ...(average ? [average] : [])
+    ].sort((a, b) => a.bracketName.localeCompare(b.bracketName));
     data.leaderboardUpdated = timestamp();
     writeData(data);
     console.log("Recalculated existing leaderboard rows; QBIOWC_SHEET_CSV is not set.");
@@ -508,6 +600,7 @@ async function main() {
   }
 
   const existingSeeded = (data.leaderboard || [])
+    .filter((row) => !row.synthetic && row.id !== averageBracketId)
     .filter((row) => !removedBracketNames.has(row.bracketName))
     .filter((row) => !formBracketNames.has(row.bracketName))
     .filter((row) => !fakePicks[row.bracketName]);
@@ -543,7 +636,9 @@ async function main() {
     })
   ];
 
-  data.leaderboard = scoreRows(rowsToScore, data).sort((a, b) => a.bracketName.localeCompare(b.bracketName));
+  const scored = scoreRows(rowsToScore, data);
+  const average = averageQBioRow(rowsToScore, data);
+  data.leaderboard = [...scored, ...(average ? [average] : [])].sort((a, b) => a.bracketName.localeCompare(b.bracketName));
   data.leaderboardUpdated = timestamp();
 
   writeData(data);

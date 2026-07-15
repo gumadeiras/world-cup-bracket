@@ -464,11 +464,17 @@ function renderLeaderboard() {
     leaderboardUpdatedEl.textContent = `updated ${displayTimestamp(data.leaderboardUpdated || data.updated)}`;
   }
   const rows = sortedLeaderboard();
-  const movement = leaderboardMovement(rows);
-  leaderboardEl.innerHTML = rows.length ? rows.map((row, index) => `
-    <div class="leader-row">
-      <span>${index + 1}</span><span class="leader-name">${renderRankChange(row, index, movement)}<a class="leader-link" href="?entry=${escapeAttribute(entryId(row, index))}">${escapeHtml(row.bracketName)}</a></span><span class="leader-boost">${renderBoostCountry(row.boostCountry)}</span><span>${row.points}</span><span>${row.exact}</span><span>${row.result}</span><span>${row.scorers}</span>
-    </div>`).join("") : `
+  const movement = leaderboardMovement(rows.filter((row) => !row.synthetic));
+  let rank = 0;
+  leaderboardEl.innerHTML = rows.length ? rows.map((row, index) => {
+    if (!row.synthetic) rank++;
+    const rankLabel = row.synthetic ? `<b title="Not included in leaderboard positions">AVG</b>` : rank;
+    const change = row.synthetic ? "" : renderRankChange(row, rank - 1, movement);
+    return `
+    <div class="leader-row${row.synthetic ? " synthetic" : ""}">
+      <span>${rankLabel}</span><span class="leader-name">${change}<a class="leader-link" href="?entry=${escapeAttribute(entryId(row, index))}">${escapeHtml(row.bracketName)}</a></span><span class="leader-boost">${renderBoostCountry(row.boostCountry)}</span><span>${row.points}</span><span>${row.exact}</span><span>${row.result}</span><span>${row.scorers}</span>
+    </div>`;
+  }).join("") : `
     <div class="leader-row">
       <span>-</span><span>TBD</span><span>-</span><span>0</span><span>0</span><span>0</span><span>0</span>
     </div>`;
@@ -513,6 +519,7 @@ function leaderboardTimeline() {
     name: row.bracketName,
     bracketName: row.bracketName,
     joined: leaderboardJoinedDay(row, days[0]),
+    synthetic: Boolean(row.synthetic),
     row,
     values: []
   }));
@@ -525,11 +532,16 @@ function leaderboardTimeline() {
       .map((entry) => {
         const score = leaderboardScoreThrough(entry.row, includedMatches);
         return { ...entry, ...score };
-      })
-      .sort(compareLeaderboardRows);
-    active.forEach((entry, index) => {
+      });
+    const ranked = active.filter((entry) => !entry.synthetic).sort(compareLeaderboardRows);
+    ranked.forEach((entry, index) => {
       const target = rows.find((row) => row.key === entry.key);
       target.values.push({ day, rank: index + 1, points: entry.points, exact: entry.exact, scorers: entry.scorers });
+    });
+    active.filter((entry) => entry.synthetic).forEach((entry) => {
+      const rank = ranked.filter((participant) => compareLeaderboardRows(participant, entry) < 0).length + 1;
+      const target = rows.find((row) => row.key === entry.key);
+      target.values.push({ day, rank, points: entry.points, exact: entry.exact, scorers: entry.scorers });
     });
   });
 
@@ -604,7 +616,9 @@ function renderLeaderboardTimeline() {
   const latest = selectedValues[selectedValues.length - 1];
   const peak = selectedValues.length ? Math.min(...selectedValues.map((value) => value.rank)) : null;
   rankTimelineSummaryEl.innerHTML = latest
-    ? `<b>#${latest.rank} now</b>. peak #${peak}. ${formatCount(latest.points, "point")}.`
+    ? selected.synthetic
+      ? `<b>average would rank #${latest.rank}</b>. peak #${peak}. ${formatCount(latest.points, "point")}.`
+      : `<b>#${latest.rank} now</b>. peak #${peak}. ${formatCount(latest.points, "point")}.`
     : "No completed game days yet.";
 
   const width = Math.max(300, Math.round(rankTimelineEl.clientWidth));
@@ -620,7 +634,7 @@ function renderLeaderboardTimeline() {
   const rankTicks = [1, ...Array.from({ length: Math.floor(maxRank / 5) }, (_, index) => (index + 1) * 5)]
     .filter((rank, index, values) => rank <= maxRank && values.indexOf(rank) === index);
   if (rankTicks[rankTicks.length - 1] !== maxRank) rankTicks.push(maxRank);
-  const currentTopFive = new Set(currentOrder.slice(0, 5).map((row) => row.key));
+  const currentTopFive = new Set(currentOrder.filter((row) => !row.synthetic).slice(0, 5).map((row) => row.key));
   const orderedRows = [...timeline.rows].sort((a, b) => a.key === selectedTimelineRow ? 1 : b.key === selectedTimelineRow ? -1 : 0);
   const dayStep = timeline.days.length > 1 ? plotWidth / (timeline.days.length - 1) : plotWidth;
   const phaseBands = timeline.phases.map((phase, index) => {
@@ -652,7 +666,7 @@ function renderLeaderboardTimeline() {
     const last = row.values[row.values.length - 1];
     const endX = x(timeline.days.indexOf(last.day));
     const endY = y(last.rank);
-    const label = `${compactTimelineName(row.name, 22)} #${last.rank}`;
+    const label = `${compactTimelineName(row.name, 22)} ${row.synthetic ? "AVG " : "#"}${last.rank}`;
     const labelWidth = Math.min(compact ? 210 : 184, Math.max(92, label.length * 7.2 + 12));
     const labelX = compact ? Math.max(4, endX - labelWidth - 10) : endX + 10;
     const labelY = Math.max(margin.top, Math.min(height - margin.bottom - 23, endY - 11));
@@ -667,7 +681,7 @@ function renderLeaderboardTimeline() {
 
   rankTimelineEl.querySelector("svg")?.remove();
   rankTimelineEl.insertAdjacentHTML("afterbegin", `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Leaderboard position by World Cup game day" aria-describedby="rank-timeline-description">
-    <desc id="rank-timeline-description">Each line represents one bracket. Rank one is at the top. Tournament rounds are separated by labeled gold dividers. Select or hover a line for details.</desc>
+    <desc id="rank-timeline-description">Each line represents one bracket or the QBio average benchmark. Rank one is at the top. Tournament rounds are separated by labeled gold dividers. Select or hover a line for details.</desc>
     ${phaseBands}${dayGrid}${rankGrid}${lines}${endpoints}
   </svg>`);
 
@@ -734,7 +748,7 @@ function sortedLeaderboard() {
 }
 
 function statCrimeRows() {
-  return (data.leaderboard || []).filter((row) => row.bracketName?.trim().toLowerCase() !== "test");
+  return (data.leaderboard || []).filter((row) => !row.synthetic && row.bracketName?.trim().toLowerCase() !== "test");
 }
 
 function compareLeaderboardRows(a, b) {
@@ -815,14 +829,26 @@ function pickedSide(id, home, away) {
   return data.advance === "home" || data.advance === "away" ? data.advance : "";
 }
 
-function entryPredictedSlot(raw, id) {
-  const value = resolveThirdSlot(raw, id);
+function entryActualKnownBefore(row, upstreamId, targetId) {
+  const submittedAt = Number(row.picks?.matchSubmittedAt?.[targetId]);
+  const kickoffAt = Date.parse(matchResults[upstreamId]?.date || "");
+  return Number.isFinite(submittedAt) && Number.isFinite(kickoffAt) && submittedAt >= kickoffAt + 3 * 60 * 60 * 1000;
+}
+
+function entryPredictedSlot(row, raw, targetId) {
+  const value = resolveThirdSlot(raw, targetId);
   const match = /^([WL])(\d+)$/.exec(value);
   if (!match) return slotInfo(value).main || value;
+  const actual = matchResults[match[2]];
+  if (entryActualKnownBefore(row, match[2], targetId) && actual?.winnerSide) {
+    const winnerName = actual.winnerSide === "home" ? actual.home : actual.away;
+    const loserName = actual.winnerSide === "home" ? actual.away : actual.home;
+    return match[1] === "W" ? winnerName : loserName;
+  }
   const source = matchMeta(match[2])?.match;
   if (!source) return value;
-  const home = entryPredictedSlot(source[1], source[0]);
-  const away = entryPredictedSlot(source[2], source[0]);
+  const home = entryPredictedSlot(row, source[1], targetId);
+  const away = entryPredictedSlot(row, source[2], targetId);
   const side = pickedSide(source[0], home, away);
   if (!side) return value;
   const winnerName = side === "home" ? home : away;
@@ -833,7 +859,7 @@ function entryPredictedSlot(raw, id) {
 function entryPredictedMatchText(row, id) {
   return withPicks(row.picks, () => {
     const match = matchMeta(id)?.match;
-    return match ? [entryPredictedSlot(match[1], id), entryPredictedSlot(match[2], id)].filter(Boolean).join(" vs ") : "";
+    return match ? [entryPredictedSlot(row, match[1], id), entryPredictedSlot(row, match[2], id)].filter(Boolean).join(" vs ") : "";
   });
 }
 
@@ -842,10 +868,10 @@ function completePick(row, id) {
   return match && match.home !== "" && match.away !== "" && match.home != null && match.away != null;
 }
 
-function scoreLine(row, id) {
+function scoreLine(row, id, closed = false) {
   const score = (row.matchBreakdown || []).find((match) => String(match.id) === String(id));
   const actual = matchResults[id];
-  if (!score && actual) {
+  if (!score && (actual || closed)) {
     const message = completePick(row, id) ? `picked ${entryPredictedMatchText(row, id) || "another matchup"}` : "late submission";
     return `<span class="entry-points closed">closed</span><small>${escapeHtml(message)} · no points</small>`;
   }
@@ -870,15 +896,18 @@ function renderEntryMatch(row, match) {
   const [id, homeRaw, awayRaw] = match;
   const pickData = pick(id);
   const score = (row.matchBreakdown || []).find((item) => String(item.id) === String(id));
-  const closed = matchResults[id] && !score;
   const home = label(resolveThirdSlot(homeRaw, id));
   const away = label(resolveThirdSlot(awayRaw, id));
   const win = winner(id);
+  const predictedMatch = entryPredictedMatchText(row, id);
+  const currentMatch = [home, away].join(" vs ");
   const matchBoost = row.picks?.matchBoostCountry?.[id] ?? row.boostCountry;
   const boosted = matchBoost && [slotInfo(home).team?.n, slotInfo(away).team?.n].includes(matchBoost);
+  const wrongPath = Boolean(slotInfo(home).team && slotInfo(away).team && predictedMatch && predictedMatch !== currentMatch);
   const missed = score && !score.exact && !score.result;
+  const closed = !score && Boolean(matchResults[id] || wrongPath);
   return `<article class="entry-match ${boosted ? "boosted" : ""} ${closed ? "closed" : ""} ${missed ? "missed" : ""} ${score?.exact ? "exact" : score?.result ? "result" : ""} ${score?.scorers ? "scorer-hit" : ""}">
-    <div class="entry-match-head"><time>${kickoffs[id]}</time><span>${scoreLine(row, id)}</span></div>
+    <div class="entry-match-head"><time>${kickoffs[id]}</time><span>${scoreLine(row, id, closed)}</span></div>
     ${renderEntryTeam(slotInfo(home), pickData.home, pickData.homeScorers, win, !closed)}
     ${renderEntryTeam(slotInfo(away), pickData.away, pickData.awayScorers, win, !closed)}
   </article>`;
@@ -1397,7 +1426,7 @@ function renderStatCrimesPanel(target, updatedEl, { completed, includeBracket, m
 }
 
 function crowdPicks(id) {
-  const rows = data.leaderboard || [];
+  const rows = (data.leaderboard || []).filter((row) => !row.synthetic);
   const scores = new Map();
   const teamCounts = new Map();
   let teamTotal = 0;

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
-import { applyPublishedScoringOverrides, mergeSubmittedPicks, sanitizePicks, scorePicks, scorePicksDetailed, scoreRows } from "./update_qbiowc_leaderboard.mjs";
+import { applyPublishedScoringOverrides, averageQBioPicks, mergeSubmittedPicks, sanitizePicks, scorePicks, scorePicksDetailed, scoreRows } from "./update_qbiowc_leaderboard.mjs";
 
 const data = {
   matchResults: {
@@ -54,6 +54,15 @@ const overlongScorers = { boostCountry: "", matches: { 74: { home: 0, away: 1, h
 const overlongData = { matchResults: { 74: { home: "A", away: "B", homeScore: 0, awayScore: 1, winnerSide: "away", homeScorers: ["hidden"], awayScorers: ["q1"] } } };
 assert.deepEqual(sanitizePicks(overlongScorers).matches[74], { home: 0, away: 1, advance: "", homeScorers: [], awayScorers: ["q1"] });
 assert.deepEqual(scorePicks(overlongScorers, overlongData), { points: 4, exact: 1, result: 0, scorers: 1 });
+
+const average = averageQBioPicks([
+  { picks: { boostCountry: "A", matches: { 73: { home: 3, away: 1, homeScorers: ["star", "star", "other"], awayScorers: ["away"] }, 74: { home: 1, away: 1, advance: "away" } } } },
+  { picks: { boostCountry: "A", matches: { 73: { home: 3, away: 1, homeScorers: ["star", "second", "third"], awayScorers: ["away"] }, 74: { home: 1, away: 1, advance: "away" } } } },
+  { picks: { boostCountry: "B", matches: { 73: { home: 2, away: 1, homeScorers: ["star", "second"], awayScorers: ["away"] }, 74: { home: 1, away: 1, advance: "home" } } } }
+]);
+assert.equal(average.boostCountry, "A");
+assert.deepEqual(average.matches[73], { home: 3, away: 1, advance: "", homeScorers: ["star", "second", "other"], awayScorers: ["away"] });
+assert.equal(average.matches[74].advance, "away");
 
 const switchedBoost = structuredClone(picks);
 switchedBoost.boostCountry = "A";
