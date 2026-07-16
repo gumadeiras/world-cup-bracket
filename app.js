@@ -142,6 +142,8 @@ const rankTimelineSummaryEl = document.querySelector("[data-rank-timeline-summar
 const rankTimelineTooltipEl = document.querySelector("[data-rank-timeline-tooltip]");
 const statCrimesEl = document.querySelector("[data-stat-crimes]");
 const statCrimesUpdatedEl = document.querySelector("[data-stat-crimes-updated]");
+const finalStretchStatCrimesEl = document.querySelector("[data-final-stretch-stat-crimes]");
+const finalStretchStatCrimesUpdatedEl = document.querySelector("[data-final-stretch-stat-crimes-updated]");
 const r16StatCrimesEl = document.querySelector("[data-r16-stat-crimes]");
 const r16StatCrimesUpdatedEl = document.querySelector("[data-r16-stat-crimes-updated]");
 const groupStatCrimesEl = document.querySelector("[data-group-stat-crimes]");
@@ -150,11 +152,9 @@ const entryDetailEl = document.querySelector("[data-entry-detail]");
 const todayMatchesEl = document.querySelector("[data-today-matches]");
 const nextMatchesEl = document.querySelector("[data-next-matches]");
 const fundingPanelEl = document.querySelector("[data-funding-panel]");
-const fundingRuleEls = document.querySelectorAll("[data-funding-rule]");
 const fundingMatchEl = document.querySelector("[data-funding-match]");
 const fundingTeamEl = document.querySelector("[data-funding-team]");
 const finalAimPanelEl = document.querySelector("[data-final-aim-panel]");
-const finalAimRuleEls = document.querySelectorAll("[data-final-aim-rule]");
 const finalFirstScorerEl = document.querySelector("[data-final-first-scorer]");
 const finalDecisionEl = document.querySelector("[data-final-decision]");
 const tickerTrack = document.querySelector("[data-ticker-track]");
@@ -1304,6 +1304,14 @@ function groupStageCrimeCards() {
 }
 
 function renderStatCrimes() {
+  const finalStretchIds = [rounds[2], rounds[3], rounds[5]].flatMap((round) => round.matches.map(([id]) => String(id)));
+  const finalStretchCompleted = completedStatMatches(matchResults, data.matchStats || {}).filter((entry) => finalStretchIds.includes(entry.id));
+  renderStatCrimesPanel(finalStretchStatCrimesEl, finalStretchStatCrimesUpdatedEl, {
+    completed: finalStretchCompleted,
+    includeBracket: true,
+    matchIds: finalStretchIds,
+    title: "final stretch"
+  });
   const r32Ids = rounds[0].matches.map(([id]) => String(id));
   const r32Completed = completedStatMatches(matchResults, data.matchStats || {}).filter((entry) => r32Ids.includes(entry.id));
   renderStatCrimesPanel(statCrimesEl, statCrimesUpdatedEl, {
@@ -2089,7 +2097,6 @@ function renderFinalSpecificAim() {
   if (!finalAimPanelEl || !finalFirstScorerEl || !finalDecisionEl) return;
   const live = finalSpecificAimLive();
   finalAimPanelEl.hidden = !live;
-  finalAimRuleEls.forEach((rule) => rule.hidden = !live);
   if (!live) return;
   finalFirstScorerEl.innerHTML = `<option value="">pick one</option>${finalScorerChoices()
     .map(({ value, label }) => `<option value="${escapeAttribute(value)}">${escapeHtml(label)}</option>`)
@@ -2108,14 +2115,12 @@ function renderEmergencyFunding() {
   if (!emergencyFundingLive()) {
     delete state.emergencyFunding;
     if (fundingPanelEl) fundingPanelEl.hidden = true;
-    fundingRuleEls.forEach((rule) => rule.hidden = true);
     fundingMatchEl.innerHTML = `<option value="">pick one</option>`;
     fundingTeamEl.innerHTML = `<option value="">pick team</option>`;
     fundingTeamEl.disabled = true;
     return;
   }
   if (fundingPanelEl) fundingPanelEl.hidden = false;
-  fundingRuleEls.forEach((rule) => rule.hidden = false);
   const selectedMatch = quarterfinalIds.has(String(state.emergencyFunding?.matchId)) ? String(state.emergencyFunding.matchId) : "";
   const matches = quarterfinalMatches();
   fundingMatchEl.innerHTML = `<option value="">pick one</option>${matches.map(([id]) => {
