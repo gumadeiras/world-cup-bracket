@@ -13,6 +13,8 @@ const roundOf16Ids = ["89", "90", "91", "92", "93", "94", "95", "96"];
 const quarterfinalIds = new Set(["97", "98", "99", "100"]);
 const rescueCutoffId = 97;
 const submissionGraceMs = 10 * 60 * 1000;
+const finalKickoffAt = Date.parse("2026-07-19T19:00:00Z");
+const finalDecisionOptions = new Set(["regulation", "extra-time", "penalties"]);
 const averageBracketId = "average-qbio-prediction";
 const averageBracketName = "Average QBio Prediction";
 const firstSubmissionExceptions = new Map([
@@ -236,7 +238,10 @@ function stampSubmittedMatches(picks, submittedAt) {
     matchSubmittedAt[id] = submittedAt;
     matchBoostCountry[id] = picks.boostCountry || "";
   }
-  return { ...picks, matchSubmittedAt, matchBoostCountry };
+  const finalSpecificAim = picks.finalSpecificAim
+    ? { ...picks.finalSpecificAim, submittedAt }
+    : null;
+  return { ...picks, matchSubmittedAt, matchBoostCountry, ...(finalSpecificAim ? { finalSpecificAim } : {}) };
 }
 
 function goalMinute(value) {
@@ -391,7 +396,28 @@ export function scorePicksDetailed(picks, data, options = {}) {
       ...(rescueActive ? { emergencyFunding: 1, emergencyBonus: rescueBonus, emergencyMultiplier: 2 } : {})
     });
   }
-  return { total, matches };
+  const finalSpecificAim = scoreFinalSpecificAim(picks, actualRaw[104]);
+  if (finalSpecificAim) total.points += finalSpecificAim.points;
+  return { total, matches, ...(finalSpecificAim ? { finalSpecificAim } : {}) };
+}
+
+function firstScorer(match) {
+  if (Number(match?.homeScore) + Number(match?.awayScore) === 0) return "no scorer";
+  return ["home", "away"]
+    .flatMap((side) => (match?.[`${side}Scorers`] || []).map((name, index) => ({
+      name,
+      minute: goalMinute(match?.[`${side}ScorerTimes`]?.[index])
+    })))
+    .filter((goal) => goal.name && goal.minute > 0)
+    .sort((a, b) => a.minute - b.minute)[0]?.name.trim() || "";
+}
+
+function scoreFinalSpecificAim(picks, finalResult) {
+  const aim = picks.finalSpecificAim;
+  if (!aim || !finalResult?.winnerSide || !Number.isFinite(aim.submittedAt) || aim.submittedAt >= finalKickoffAt) return null;
+  const scorerHit = Boolean(aim.firstScorer) && aim.firstScorer === firstScorer(finalResult);
+  const decisionHit = Boolean(aim.decision) && aim.decision === finalResult.decisionMethod;
+  return { points: (scorerHit ? 2 : 0) + (decisionHit ? 1 : 0), scorerHit, decisionHit };
 }
 
 function parsePicks(row) {
@@ -442,6 +468,19 @@ export function mergeSubmittedPicks(previous, latest, submissionCutoffs, submitt
       delete merged.matchBoostCountry[id];
     }
   }
+  const previousAim = previous.finalSpecificAim;
+  const latestAim = latest.finalSpecificAim;
+  if (Number.isFinite(submittedAt) && submittedAt < finalKickoffAt && latestAim) {
+    merged.finalSpecificAim = {
+      firstScorer: latestAim.firstScorer || "",
+      decision: latestAim.decision || "",
+      submittedAt
+    };
+  } else if (previousAim) {
+    merged.finalSpecificAim = previousAim;
+  } else {
+    delete merged.finalSpecificAim;
+  }
   return merged;
 }
 
@@ -456,9 +495,18 @@ export function sanitizePicks(picks) {
   const emergencyFunding = picks.emergencyFunding?.matchId && quarterfinalIds.has(String(picks.emergencyFunding.matchId))
     ? { matchId: String(picks.emergencyFunding.matchId), team: picks.emergencyFunding.team || "" }
     : null;
+  const firstScorer = typeof picks.finalSpecificAim?.firstScorer === "string" ? picks.finalSpecificAim.firstScorer.trim() : "";
+  const decision = finalDecisionOptions.has(picks.finalSpecificAim?.decision) ? picks.finalSpecificAim.decision : "";
+  const aimSubmittedAt = Number(picks.finalSpecificAim?.submittedAt);
+  const finalSpecificAim = firstScorer || decision ? {
+    firstScorer,
+    decision,
+    ...(Number.isFinite(aimSubmittedAt) ? { submittedAt: aimSubmittedAt } : {})
+  } : null;
   return {
     boostCountry: picks.boostCountry || "",
     ...(emergencyFunding ? { emergencyFunding } : {}),
+    ...(finalSpecificAim ? { finalSpecificAim } : {}),
     ...(Object.keys(matchSubmittedAt).length ? { matchSubmittedAt } : {}),
     ...(Object.keys(matchBoostCountry).length ? { matchBoostCountry } : {}),
     ...(kickoffExceptions.length ? { kickoffExceptions } : {}),
@@ -547,7 +595,13 @@ export function scoreRows(rows, data) {
       emergencyBoostStacks: Boolean(tier?.boostStacks),
       emergencyUnderdogs: underdogs
     });
-    return { ...row.base, ...score.total, picks: sanitizePicks(row.picks), matchBreakdown: score.matches };
+    return {
+      ...row.base,
+      ...score.total,
+      picks: sanitizePicks(row.picks),
+      matchBreakdown: score.matches,
+      ...(score.finalSpecificAim ? { finalSpecificAimBreakdown: score.finalSpecificAim } : {})
+    };
   });
 }
 

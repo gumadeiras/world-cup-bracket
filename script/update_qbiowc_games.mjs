@@ -276,6 +276,7 @@ async function main() {
     }
     if (!competition.status.type.completed) continue;
     const hasShootout = /PEN/.test(competition.status.type.name || "") && Number.isFinite(Number(home.shootoutScore)) && Number.isFinite(Number(away.shootoutScore));
+    const decisionMethod = hasShootout ? "penalties" : /AET/.test(competition.status.type.name || "") ? "extra-time" : "regulation";
     results.push({
       id: event.id,
       date: event.date,
@@ -284,6 +285,7 @@ async function main() {
       homeScore,
       awayScore,
       winnerSide,
+      decisionMethod,
       ...(hasShootout ? { homeShootoutScore: Number(home.shootoutScore), awayShootoutScore: Number(away.shootoutScore) } : {})
     });
   }

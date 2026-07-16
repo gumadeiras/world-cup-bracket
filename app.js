@@ -59,6 +59,8 @@ const visualMatchOrder = {
 };
 const quarterfinalIds = new Set(["97", "98", "99", "100"]);
 const roundOf16Ids = ["89", "90", "91", "92", "93", "94", "95", "96"];
+const semifinalIds = ["101", "102"];
+const finalDecisionOptions = new Set(["regulation", "extra-time", "penalties"]);
 
 const thirdPlaceSlotMatches = [79, 85, 81, 74, 82, 77, 87, 80];
 const thirdPlaceOptions = "EJIFHGLK HGIDJFLK EJIDHGLK EJIDHFLK EGIDJFLK EGJDHFLK EGIDHFLK EGJDHFLI EGJDHFIK HGICJFLK EJICHGLK EJICHFLK EGICJFLK EGJCHFLK EGICHFLK EGJCHFLI EGJCHFIK HGICJDLK CJIDHFLK CGIDJFLK CGJDHFLK CGIDHFLK CGJDHFLI CGJDHFIK EJICHDLK EGICJDLK EGJCHDLK EGICHDLK EGJCHDLI EGJCHDIK CJEDIFLK CJEDHFLK CEIDHFLK CJEDHFLI CJEDHFIK CGEDJFLK CGEDIFLK CGEDJFLI CGEDJFIK CGEDHFLK CGJDHFLE CGJDHFEK CGEDHFLI CGEDHFIK CGJDHFEI HJBFIGLK EJIBHGLK EJBFIHLK EJBFIGLK EJBFHGLK EGBFIHLK EJBFHGLI EJBFHGIK HJBDIGLK HJBDIFLK IGBDJFLK HGBDJFLK HGBDIFLK HGBDJFLI HGBDJFIK EJBDIHLK EJBDIGLK EJBDHGLK EGBDIHLK EJBDHGLI EJBDHGIK EJBDIFLK EJBDHFLK EIBDHFLK EJBDHFLI EJBDHFIK EGBDJFLK EGBDIFLK EGBDJFLI EGBDJFIK EGBDHFLK HGBDJFLE HGBDJFEK EGBDHFLI EGBDHFIK HGBDJFEI HJBCIGLK HJBCIFLK IGBCJFLK HGBCJFLK HGBCIFLK HGBCJFLI HGBCJFIK EJBCIHLK EJBCIGLK EJBCHGLK EGBCIHLK EJBCHGLI EJBCHGIK EJBCIFLK EJBCHFLK EIBCHFLK EJBCHFLI EJBCHFIK EGBCJFLK EGBCIFLK EGBCJFLI EGBCJFIK EGBCHFLK HGBCJFLE HGBCJFEK EGBCHFLI EGBCHFIK HGBCJFEI HJBCIDLK IGBCJDLK HGBCJDLK HGBCIDLK HGBCJDLI HGBCJDIK CJBDIFLK CJBDHFLK CIBDHFLK CJBDHFLI CJBDHFIK CGBDJFLK CGBDIFLK CGBDJFLI CGBDJFIK CGBDHFLK CGBDHFLJ HGBCJFDK CGBDHFLI CGBDHFIK HGBCJFDI EJBCIDLK EJBCHDLK EIBCHDLK EJBCHDLI EJBCHDIK EGBCJDLK EGBCIDLK EGBCJDLI EGBCJDIK EGBCHDLK HGBCJDLE HGBCJDEK EGBCHDLI EGBCHDIK HGBCJDEI CJBDEFLK CEBDIFLK CJBDEFLI CJBDEFIK CEBDHFLK CJBDHFLE CJBDHFEK CEBDHFLI CEBDHFIK CJBDHFEI CGBDEFLK CGBDJFLE CGBDJFEK CGBDEFLI CGBDEFIK CGBDJFEI CGBDHFLE CGBDHFEK HGBCJFDE CGBDHFEI HJIFAGLK EJIAHGLK EJIFAHLK EJIFAGLK EGJFAHLK EGIFAHLK EGJFAHLI EGJFAHIK HJIDAGLK HJIDAFLK IGJDAFLK HGJDAFLK HGIDAFLK HGJDAFLI HGJDAFIK EJIDAHLK EJIDAGLK EGJDAHLK EGIDAHLK EGJDAHLI EGJDAHIK EJIDAFLK HJEDAFLK HEIDAFLK HJEDAFLI HJEDAFIK EGJDAFLK EGIDAFLK EGJDAFLI EGJDAFIK HGEDAFLK HGJDAFLE HGJDAFEK HGEDAFLI HGEDAFIK HGJDAFEI HJICAGLK HJICAFLK IGJCAFLK HGJCAFLK HGICAFLK HGJCAFLI HGJCAFIK EJICAHLK EJICAGLK EGJCAHLK EGICAHLK EGJCAHLI EGJCAHIK EJICAFLK HJECAFLK HEICAFLK HJECAFLI HJECAFIK EGJCAFLK EGICAFLK EGJCAFLI EGJCAFIK HGECAFLK HGJCAFLE HGJCAFEK HGECAFLI HGECAFIK HGJCAFEI HJICADLK IGJCADLK HGJCADLK HGICADLK HGJCADLI HGJCADIK CJIDAFLK HJFCADLK HFICADLK HJFCADLI HJFCADIK CGJDAFLK CGIDAFLK CGJDAFLI CGJDAFIK HGFCADLK CGJDAFLH HGJCAFDK HGFCADLI HGFCADIK HGJCAFDI EJICADLK HJECADLK HEICADLK HJECADLI HJECADIK EGJCADLK EGICADLK EGJCADLI EGJCADIK HGECADLK HGJCADLE HGJCADEK HGECADLI HGECADIK HGJCADEI CJEDAFLK CEIDAFLK CJEDAFLI CJEDAFIK HEFCADLK HJFCADLE HJECAFDK HEFCADLI HEFCADIK HJECAFDI CGEDAFLK CGJDAFLE CGJDAFEK CGEDAFLI CGEDAFIK CGJDAFEI HGFCADLE HGECAFDK HGJCAFDE HGECAFDI HJBAIGLK HJBAIFLK IJBFAGLK HJBFAGLK HGBAIFLK HJBFAGLI HJBFAGIK EJBAIHLK EJBAIGLK EJBAHGLK EGBAIHLK EJBAHGLI EJBAHGIK EJBAIFLK EJBFAHLK EIBFAHLK EJBFAHLI EJBFAHIK EJBFAGLK EGBAIFLK EJBFAGLI EJBFAGIK EGBFAHLK HJBFAGLE HJBFAGEK EGBFAHLI EGBFAHIK HJBFAGEI IJBDAHLK IJBDAGLK HJBDAGLK IGBDAHLK HJBDAGLI HJBDAGIK IJBDAFLK HJBDAFLK HIBDAFLK HJBDAFLI HJBDAFIK FJBDAGLK IGBDAFLK FJBDAGLI FJBDAGIK HGBDAFLK HGBDAFLJ HGBDAFJK HGBDAFLI HGBDAFIK HGBDAFIJ EJBAIDLK EJBDAHLK EIBDAHLK EJBDAHLI EJBDAHIK EJBDAGLK EGBAIDLK EJBDAGLI EJBDAGIK EGBDAHLK HJBDAGLE HJBDAGEK EGBDAHLI EGBDAHIK HJBDAGEI EJBDAFLK EIBDAFLK EJBDAFLI EJBDAFIK HEBDAFLK HJBDAFLE HJBDAFEK HEBDAFLI HEBDAFIK HJBDAFEI EGBDAFLK EGBDAFLJ EGBDAFJK EGBDAFLI EGBDAFIK EGBDAFIJ HGBDAFLE HGBDAFEK HGBDAFEJ HGBDAFEI IJBCAHLK IJBCAGLK HJBCAGLK IGBCAHLK HJBCAGLI HJBCAGIK IJBCAFLK HJBCAFLK HIBCAFLK HJBCAFLI HJBCAFIK CJBFAGLK IGBCAFLK CJBFAGLI CJBFAGIK HGBCAFLK HGBCAFLJ HGBCAFJK HGBCAFLI HGBCAFIK HGBCAFIJ EJBAICLK EJBCAHLK EIBCAHLK EJBCAHLI EJBCAHIK EJBCAGLK EGBAICLK EJBCAGLI EJBCAGIK EGBCAHLK HJBCAGLE HJBCAGEK EGBCAHLI EGBCAHIK HJBCAGEI EJBCAFLK EIBCAFLK EJBCAFLI EJBCAFIK HEBCAFLK HJBCAFLE HJBCAFEK HEBCAFLI HEBCAFIK HJBCAFEI EGBCAFLK EGBCAFLJ EGBCAFJK EGBCAFLI EGBCAFIK EGBCAFIJ HGBCAFLE HGBCAFEK HGBCAFEJ HGBCAFEI IJBCADLK HJBCADLK HIBCADLK HJBCADLI HJBCADIK CJBDAGLK IGBCADLK CJBDAGLI CJBDAGIK HGBCADLK HGBCADLJ HGBCADJK HGBCADLI HGBCADIK HGBCADIJ CJBDAFLK CIBDAFLK CJBDAFLI CJBDAFIK HFBCADLK CJBDAFLH HJBCAFDK HFBCADLI HFBCADIK HJBCAFDI CGBDAFLK CGBDAFLJ CGBDAFJK CGBDAFLI CGBDAFIK CGBDAFIJ CGBDAFLH HGBCAFDK HGBCAFDJ HGBCAFDI EJBCADLK EIBCADLK EJBCADLI EJBCADIK HEBCADLK HJBCADLE HJBCADEK HEBCADLI HEBCADIK HJBCADEI EGBCADLK EGBCADLJ EGBCADJK EGBCADLI EGBCADIK EGBCADIJ HGBCADLE HGBCADEK HGBCADEJ HGBCADEI CEBDAFLK CJBDAFLE CJBDAFEK CEBDAFLI CEBDAFIK CJBDAFEI HFBCADLE HEBCAFDK HJBCAFDE HEBCAFDI CGBDAFLE CGBDAFEK CGBDAFEJ CGBDAFEI HGBCAFDE".split(" ").reduce((options, row) => {
@@ -151,6 +153,10 @@ const fundingPanelEl = document.querySelector("[data-funding-panel]");
 const fundingRuleEls = document.querySelectorAll("[data-funding-rule]");
 const fundingMatchEl = document.querySelector("[data-funding-match]");
 const fundingTeamEl = document.querySelector("[data-funding-team]");
+const finalAimPanelEl = document.querySelector("[data-final-aim-panel]");
+const finalAimRuleEls = document.querySelectorAll("[data-final-aim-rule]");
+const finalFirstScorerEl = document.querySelector("[data-final-first-scorer]");
+const finalDecisionEl = document.querySelector("[data-final-decision]");
 const tickerTrack = document.querySelector("[data-ticker-track]");
 const board = document.querySelector("[data-board]");
 const slotLegendEl = document.querySelector(".slot-legend");
@@ -292,6 +298,13 @@ function sanitizePicks(picks) {
   } else {
     delete picks.emergencyFunding;
   }
+  const firstScorer = typeof picks.finalSpecificAim?.firstScorer === "string" ? picks.finalSpecificAim.firstScorer.trim() : "";
+  const decision = finalDecisionOptions.has(picks.finalSpecificAim?.decision) ? picks.finalSpecificAim.decision : "";
+  if (firstScorer || decision) {
+    picks.finalSpecificAim = { firstScorer, decision };
+  } else {
+    delete picks.finalSpecificAim;
+  }
   Object.values(picks.matches).forEach((match) => {
     trimScorers(match, "home");
     trimScorers(match, "away");
@@ -310,6 +323,15 @@ function save() {
     state.emergencyFunding = { matchId: fundingMatch, team: fundingTeam };
   } else {
     delete state.emergencyFunding;
+  }
+  if (finalSpecificAimLive()) {
+    const firstScorer = finalFirstScorerEl?.value || "";
+    const decision = finalDecisionEl?.value || "";
+    if (firstScorer || decision) {
+      state.finalSpecificAim = { firstScorer, decision };
+    } else {
+      delete state.finalSpecificAim;
+    }
   }
   delete state.country;
   sanitizePicks(state);
@@ -870,7 +892,14 @@ function completePick(row, id) {
 
 function scoreLine(row, id, closed = false) {
   const score = (row.matchBreakdown || []).find((match) => String(match.id) === String(id));
+  const finalAim = String(id) === "104" ? row.finalSpecificAimBreakdown : null;
   const actual = matchResults[id];
+  if (!score && finalAim) {
+    const text = finalAim.points
+      ? [finalAim.scorerHit ? "first scorer +2" : "", finalAim.decisionHit ? "decision +1" : ""].filter(Boolean).join(" · ")
+      : "specific aim miss";
+    return `<span class="entry-points">+${finalAim.points}</span><small class="entry-score-chips"><em class="final-aim">${escapeHtml(text)}</em></small>`;
+  }
   if (!score && (actual || closed)) {
     const message = completePick(row, id) ? `picked ${entryPredictedMatchText(row, id) || "another matchup"}` : "late submission";
     return `<span class="entry-points closed">closed</span><small>${escapeHtml(message)} · no points</small>`;
@@ -880,9 +909,10 @@ function scoreLine(row, id, closed = false) {
     score.exact ? ["exact", "exact"] : score.result ? ["result", "winner"] : ["miss", "score miss"],
     score.scorers ? ["scorers", `${score.scorers} scorer${score.scorers === 1 ? "" : "s"}`] : null,
     score.multiplier === 2 ? ["boost", "2x"] : null,
-    score.emergencyFunding ? ["funding", `funding${score.emergencyBonus ? ` +${score.emergencyBonus}` : " 2x"}`] : null
+    score.emergencyFunding ? ["funding", `funding${score.emergencyBonus ? ` +${score.emergencyBonus}` : " 2x"}`] : null,
+    finalAim ? ["final-aim", `specific aim +${finalAim.points}`] : null
   ].filter(Boolean);
-  return `<span class="entry-points">+${score.points}</span><small class="entry-score-chips">${chips.map(([kind, text]) => `<em class="${kind}">${escapeHtml(text)}</em>`).join("")}</small>`;
+  return `<span class="entry-points">+${score.points + (finalAim?.points || 0)}</span><small class="entry-score-chips">${chips.map(([kind, text]) => `<em class="${kind}">${escapeHtml(text)}</em>`).join("")}</small>`;
 }
 
 function renderEntryTeam(info, score, scorers, winnerName, showDetails = true) {
@@ -945,6 +975,7 @@ async function copyEntryBracket(row) {
     bracketName: row.bracketName || "",
     email: "",
     boostCountry: picks.boostCountry || row.boostCountry || "",
+    ...(picks.finalSpecificAim ? { finalSpecificAim: picks.finalSpecificAim } : {}),
     matches: picks.matches || {}
   };
   await copyText(JSON.stringify(payload, null, 2), "copy bracket");
@@ -1617,6 +1648,7 @@ function renderAffected(id) {
   });
   board.querySelector(".champion")?.replaceWith(htmlToElement(renderChampion()));
   renderEmergencyFunding();
+  renderFinalSpecificAim();
   layoutBracketCards();
   drawBracketLines();
 }
@@ -1739,6 +1771,7 @@ function updateScrollHint() {
 function render() {
   renderMatchFeed();
   renderEmergencyFunding();
+  renderFinalSpecificAim();
   if (slotLegendEl) slotLegendEl.hidden = !hasProjectedRoundOf32Slot();
   board.innerHTML = rounds.map((round) => `
     <section class="round">
@@ -1864,7 +1897,7 @@ function validateRestoreInput(restored) {
 }
 
 function restoreErrorMessage(error) {
-  return `Restore failed: ${error.message}. Paste this to your agent: output one valid restore response for ${publicUrl}. It must include name, bracketName, email, boostCountry, emergencyFunding, and a matches object keyed by match numbers 73-104.`;
+  return `Restore failed: ${error.message}. Paste this to your agent: output one valid restore response for ${publicUrl}. It must include name, bracketName, email, boostCountry, finalSpecificAim, and a matches object keyed by match numbers 73-104.`;
 }
 
 function randomItem(items) {
@@ -1929,8 +1962,16 @@ function randomizePicks() {
   } else {
     delete state.emergencyFunding;
   }
+  if (finalSpecificAimLive()) {
+    const scorers = finalScorerChoices().map((choice) => choice.value);
+    state.finalSpecificAim = {
+      firstScorer: randomItem(scorers),
+      decision: randomItem([...finalDecisionOptions])
+    };
+  }
   document.querySelector("[data-boost-country]").value = state.boostCountry || "";
   renderEmergencyFunding();
+  renderFinalSpecificAim();
   document.querySelector("[data-randomize]").textContent = nextRandomizeLabel();
   save();
   render();
@@ -1951,6 +1992,7 @@ function restoreTemplate() {
     email: "",
     boostCountry: "",
     emergencyFunding: { matchId: "", team: "" },
+    finalSpecificAim: { firstScorer: "", decision: "" },
     matches: Object.fromEntries(rounds.flatMap((round) => round.matches).map(([id]) => [
       String(id),
       { home: null, away: null, advance: "", homeScorers: [], awayScorers: [] }
@@ -1985,6 +2027,7 @@ Rules:
 - homeScorers and awayScorers can be empty arrays, or exact player names if you are confident.
 - Pick one boostCountry from a team in the knockout bracket.
 ${emergencyFundingLive() ? "- Pick one emergencyFunding object with a quarterfinal matchId and one team from that match if your Round of 16 leaderboard score is 32 or lower." : ""}
+${finalSpecificAimLive() ? "- Fill finalSpecificAim. Pick one firstScorer from the final teams and one decision: regulation, extra-time, or penalties." : ""}
 - Keep the interview playful. Lightly roast the choices and the user, but keep it friendly.
 - Before the final restore data, tell me: "copy this response, open restore on the page (${publicUrl}), paste it, and click restore."
 - Then output the restore data as valid JSON. No markdown. No explanation.
@@ -2019,6 +2062,40 @@ function quarterfinalMatches() {
 
 function emergencyFundingLive() {
   return roundOf16Ids.every((id) => matchResults[id]?.winnerSide) && Date.now() < kickoffTime(97);
+}
+
+function finalSpecificAimLive() {
+  return semifinalIds.every((id) => matchResults[id]?.winnerSide) && Date.now() < kickoffTime(104);
+}
+
+function finalTeams() {
+  return teams(104).map((slot) => slotInfo(slot).team).filter(Boolean);
+}
+
+function finalScorerChoices() {
+  const choices = [
+    { value: "no scorer", label: "no goals before penalties" },
+    { value: "own goal", label: "own goal" }
+  ];
+  for (const team of finalTeams()) {
+    for (const player of data.players?.[team.n] || []) {
+      choices.push({ value: player.trim(), label: `${player.trim()} (${team.n})` });
+    }
+  }
+  return choices.filter((choice, index) => choices.findIndex((candidate) => candidate.value === choice.value) === index);
+}
+
+function renderFinalSpecificAim() {
+  if (!finalAimPanelEl || !finalFirstScorerEl || !finalDecisionEl) return;
+  const live = finalSpecificAimLive();
+  finalAimPanelEl.hidden = !live;
+  finalAimRuleEls.forEach((rule) => rule.hidden = !live);
+  if (!live) return;
+  finalFirstScorerEl.innerHTML = `<option value="">pick one</option>${finalScorerChoices()
+    .map(({ value, label }) => `<option value="${escapeAttribute(value)}">${escapeHtml(label)}</option>`)
+    .join("")}`;
+  finalFirstScorerEl.value = state.finalSpecificAim?.firstScorer || "";
+  finalDecisionEl.value = finalDecisionOptions.has(state.finalSpecificAim?.decision) ? state.finalSpecificAim.decision : "";
 }
 
 function fundingTeamsForMatch(id) {
@@ -2059,6 +2136,7 @@ function renderEmergencyFunding() {
 
 renderBoostCountries();
 renderEmergencyFunding();
+renderFinalSpecificAim();
 document.querySelector("[data-player-name]").value = state.name || "";
 document.querySelector("[data-bracket-name]").value = state.bracketName || "";
 document.querySelector("[data-player-email]").value = state.email || "";
@@ -2075,6 +2153,8 @@ fundingMatchEl?.addEventListener("change", () => {
   save();
 });
 fundingTeamEl?.addEventListener("change", save);
+finalFirstScorerEl?.addEventListener("change", save);
+finalDecisionEl?.addEventListener("change", save);
 document.querySelector("[data-copy]").addEventListener("click", async () => {
   save();
   await copyPicks();

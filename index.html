@@ -275,7 +275,8 @@
       font-size: var(--type-sm);
     }
 
-    .funding-panel {
+    .funding-panel,
+    .final-aim-panel {
       grid-template-columns: minmax(0, 1.2fr) minmax(210px, 0.7fr) minmax(190px, 0.6fr);
       align-items: end;
       border-color: var(--gold);
@@ -284,18 +285,36 @@
         rgba(255, 250, 240, 0.86);
     }
 
-    .funding-panel h2 {
+    .funding-panel h2,
+    .final-aim-panel h2 {
       margin: 0 0 5px;
       color: var(--red);
       font-size: var(--type-lg);
       text-transform: uppercase;
     }
 
-    .funding-panel p {
+    .funding-panel p,
+    .final-aim-panel p {
       margin: 0;
       color: var(--muted);
       font-size: var(--type-sm);
       line-height: 1.35;
+    }
+
+    .final-aim-panel {
+      border-color: var(--red);
+      background:
+        linear-gradient(90deg, rgba(176, 8, 47, 0.13), rgba(200, 147, 43, 0.13)),
+        rgba(255, 250, 240, 0.88);
+    }
+
+    .final-aim-note {
+      grid-column: 1 / -1;
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+      color: var(--red) !important;
+      font-weight: 700;
+      text-transform: uppercase;
     }
 
     .funding-note {
@@ -1097,7 +1116,8 @@
       color: var(--gold);
     }
 
-    .entry-score-chips .funding {
+    .entry-score-chips .funding,
+    .entry-score-chips .final-aim {
       border-color: var(--red);
       color: var(--red);
     }
@@ -2226,7 +2246,8 @@
       .shell { padding: 16px; }
       .topbar,
       .panel,
-      .funding-panel {
+      .funding-panel,
+      .final-aim-panel {
         grid-template-columns: 1fr;
       }
       .actions {
@@ -2350,6 +2371,27 @@
       </div>
     </section>
 
+    <section class="panel final-aim-panel" aria-label="final specific aim" data-final-aim-panel hidden>
+      <div>
+        <h2>final specific aim</h2>
+        <p>One last experiment. Pick the first scorer and how the champion will be decided.</p>
+      </div>
+      <label>
+        first scorer (+2 points)
+        <select class="field" data-final-first-scorer></select>
+      </label>
+      <label>
+        how the champion is decided (+1 point)
+        <select class="field" data-final-decision>
+          <option value="">pick one</option>
+          <option value="regulation">regulation</option>
+          <option value="extra-time">extra time</option>
+          <option value="penalties">penalties</option>
+        </select>
+      </label>
+      <p class="final-aim-note">Maximum 3 points. No multipliers. Picks lock at final kickoff.</p>
+    </section>
+
     <section class="match-feed" aria-label="upcoming knockout matches">
       <div class="match-feed__section">
         <h2>happening today</h2>
@@ -2427,6 +2469,8 @@
               <li data-funding-rule hidden><b>Emergency tiers:</b> leaderboard score 25-32 means no boost stacking. Leaderboard score 0-24 means boost doubles the full funded award, including bonuses.</li>
               <li data-funding-rule hidden><b>Emergency bonus points:</b> +2 exact score, +2 funded team wins on penalties, +3 funded team is the QBio underdog and wins.</li>
               <li data-funding-rule hidden><b>QBio underdog:</b> the team fewer brackets picked to win that game.</li>
+              <li data-final-aim-rule hidden><b>Final Specific Aim:</b> +2 for the first scorer and +1 for how the champion is decided: regulation, extra time, or penalties.</li>
+              <li data-final-aim-rule hidden><b>Final Specific Aim does not multiply:</b> boost country does not apply. Picks lock at final kickoff.</li>
               <li><b>Knockout draws:</b> if your score is tied, choose who advances.</li>
               <li><b>Leaderboard:</b> total points first; exact scores are the first tiebreaker, then scorer points.</li>
             </ul>

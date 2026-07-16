@@ -44,6 +44,50 @@ earlyGoalData.matchResults[73].homeScorerTimes = ["3'"];
 assert.deepEqual(scorePicks({ matchSubmittedAt: { 73: Date.parse("2026-06-28T19:03:00Z") }, matches: { 73: picks.matches[73] } }, earlyGoalData), { points: 0, exact: 0, result: 0, scorers: 0 });
 assert.deepEqual(scorePicks({ matchSubmittedAt: { 73: Date.parse("2026-06-28T19:02:59Z") }, matches: { 73: picks.matches[73] } }, earlyGoalData), { points: 6, exact: 1, result: 0, scorers: 3 });
 
+const finalData = {
+  matchResults: {
+    104: {
+      date: "2026-07-19T19:00Z",
+      home: "Spain",
+      away: "Argentina",
+      homeScore: 1,
+      awayScore: 1,
+      winnerSide: "away",
+      decisionMethod: "penalties",
+      homeScorers: ["Mikel Oyarzabal"],
+      awayScorers: ["Lautaro Martínez"],
+      homeScorerTimes: ["22'"],
+      awayScorerTimes: ["85'"]
+    }
+  }
+};
+const finalAimPicks = {
+  boostCountry: "Spain",
+  finalSpecificAim: {
+    firstScorer: "Mikel Oyarzabal",
+    decision: "penalties",
+    submittedAt: Date.parse("2026-07-19T18:59:59Z")
+  },
+  matches: {}
+};
+const finalAimScore = scorePicksDetailed(finalAimPicks, finalData);
+assert.deepEqual(finalAimScore.total, { points: 3, exact: 0, result: 0, scorers: 0 });
+assert.deepEqual(finalAimScore.finalSpecificAim, { points: 3, scorerHit: true, decisionHit: true });
+const finalAimRow = scoreRows([{ key: "aim", base: { bracketName: "specific aim" }, picks: finalAimPicks }], finalData)[0];
+assert.equal(finalAimRow.points, 3);
+assert.deepEqual(finalAimRow.finalSpecificAimBreakdown, { points: 3, scorerHit: true, decisionHit: true });
+assert.equal(scorePicks({ ...finalAimPicks, finalSpecificAim: { ...finalAimPicks.finalSpecificAim, submittedAt: Date.parse("2026-07-19T19:00:00Z") } }, finalData).points, 0);
+assert.equal(scorePicks({ ...finalAimPicks, boostCountry: "Argentina" }, finalData).points, 3);
+
+const scorelessFinal = structuredClone(finalData);
+scorelessFinal.matchResults[104].homeScore = 0;
+scorelessFinal.matchResults[104].awayScore = 0;
+scorelessFinal.matchResults[104].homeScorers = [];
+scorelessFinal.matchResults[104].awayScorers = [];
+scorelessFinal.matchResults[104].homeScorerTimes = [];
+scorelessFinal.matchResults[104].awayScorerTimes = [];
+assert.equal(scorePicks({ ...finalAimPicks, finalSpecificAim: { ...finalAimPicks.finalSpecificAim, firstScorer: "no scorer" } }, scorelessFinal).points, 3);
+
 const nullScores = {
   boostCountry: "",
   matches: { 73: { home: null, away: null }, 75: { home: "", away: "" } }
@@ -227,6 +271,26 @@ assert.deepEqual(mergedSubmission.matches[73], { home: 2, away: 1 });
 assert.deepEqual(mergedSubmission.matches[74], { home: 1, away: 0 });
 assert.equal(mergedSubmission.matchBoostCountry[73], "A");
 assert.equal(mergedSubmission.matchBoostCountry[74], "B");
+
+const beforeFinal = Date.parse("2026-07-19T18:00:00Z");
+const afterFinal = Date.parse("2026-07-19T19:00:00Z");
+const firstFinalAim = mergeSubmittedPicks({}, {
+  matches: {},
+  finalSpecificAim: { firstScorer: "Mikel Oyarzabal", decision: "regulation" }
+}, new Map(), beforeFinal);
+assert.deepEqual(firstFinalAim.finalSpecificAim, {
+  firstScorer: "Mikel Oyarzabal",
+  decision: "regulation",
+  submittedAt: beforeFinal
+});
+assert.deepEqual(mergeSubmittedPicks(firstFinalAim, {
+  matches: {},
+  finalSpecificAim: { firstScorer: "Lautaro Martínez", decision: "penalties" }
+}, new Map(), afterFinal).finalSpecificAim, firstFinalAim.finalSpecificAim);
+assert.equal(mergeSubmittedPicks({}, {
+  matches: {},
+  finalSpecificAim: { firstScorer: "Lautaro Martínez", decision: "penalties" }
+}, new Map(), afterFinal).finalSpecificAim, undefined);
 assert.equal(mergeSubmittedPicks({}, { boostCountry: "A", matches: { 73: { home: 9, away: 0 } }, matchSubmittedAt: { 73: 161000 } }, new Map([["73", 100000]]), 161000).matches[73], undefined);
 assert.deepEqual(
   mergeSubmittedPicks(
